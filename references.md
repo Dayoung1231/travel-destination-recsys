@@ -20,8 +20,12 @@
 
 ## 3. Datasets
 
-| Data | Source |
-|---|---|
-| Domestic Travel Log (Seoul Capital Area) | AI Hub, https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71581 |
-| TourAPI Korean Tourism Information Service | Korea Tourism Organization, https://www.data.go.kr/data/15101578/openapi.do |
-| ASOS Daily Weather Data | KMA, https://data.kma.go.kr/data/grnd/selectAsosRltmList.do?pgmNo=36 |
+| Data | Source | License / terms |
+|---|---|---|
+| Domestic Travel Log (Seoul Capital Area) (2023) | AI Hub, https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71776 | AI Hub terms: AI training use only, no sharing with unapproved parties, attribution to NIA required |
+| TourAPI Korean Tourism Information Service | Korea Tourism Organization, https://www.data.go.kr/data/15101578/openapi.do | No usage restrictions (images excluded) |
+| ASOS Daily Weather Data | KMA, https://data.kma.go.kr/data/grnd/selectAsosRltmList.do?pgmNo=36 | KOGL Type 1 (attribution) |
+
+**AI Hub attribution** (use in reports and presentations):
+>
+> This project uses the "Domestic Travel Log Data (Seoul Capital Area) (2023)" from AI Hub, a result of a project by the National Information Society Agency (NIA) of Korea.

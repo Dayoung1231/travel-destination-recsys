@@ -20,12 +20,12 @@ Machine Learning Term Project — Team 8
 
 ## 2. 데이터셋
 
-AI Hub 데이터는 재배포가 제한되어 있어서 레포에 **올리지 않아요.** 각자 직접 내려받아야 해요.
+AI Hub 데이터는 이용 조건상 승인받지 않은 사람에게 제공할 수 없고, 국외 반출도 별도 합의가 필요해서 레포에 **올리지 않아요.** 각자 AI Hub에서 직접 내려받아야 해요.
 TourAPI 장소 목록(이용허락범위 제한 없음)과 ASOS 날씨 자료(공공누리 제1유형)는 재배포할 수 있어서 **레포에 포함해 뒀어요.**
 
 | 데이터 | 출처 | 받는 방식 | 위치 |
 |---|---|---|---|
-| 국내 여행로그 데이터(수도권) | [AI Hub](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71581) | 각자 파일 다운로드 (zip) | `data/raw/TL/`, `data/raw/VL/` |
+| 국내 여행로그 데이터(수도권) (2023) | [AI Hub](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71776) | 각자 파일 다운로드 (zip) | `data/raw/TL/`, `data/raw/VL/` |
 | 관광정보 서비스 (TourAPI) | [공공데이터포털](https://www.data.go.kr/data/15101578/openapi.do) | **레포에 포함** | `data/raw/tourapi/area_list.csv` |
 | 종관기상관측(ASOS) 일자료 | [기상자료개방포털](https://data.kma.go.kr/data/grnd/selectAsosRltmList.do?pgmNo=36) | **레포에 포함** | `data/raw/asos/asos_daily.csv` |
 
@@ -33,7 +33,13 @@ TourAPI 장소 목록(이용허락범위 제한 없음)과 ASOS 날씨 자료(�
 
 위 AI Hub 페이지에서 `TL_csv.zip`과 `VL_csv.zip`을 내려받아서 압축을 푼 후, CSV 파일을 `data/raw/TL/`, `data/raw/VL/`에 넣어요.
 
-> AI Hub의 Training/Validation 구분은 테이블마다 다르게 나뉘어 있어요. 그래서 두 폴더를 합쳐(여행자 3,600명) 우리가 직접 train / validation / test로 나눠요.
+| 항목 | Training (TL) | Validation (VL) | 합계 |
+|---|---|---|---|
+| 여행객 (1명당 여행 1번) | 2,560명 | 320명 | **2,880명** |
+| 방문 기록 | 21,384건 | 2,770건 | 24,154건 |
+| 방문 기간 | | | **2023-04-28 ~ 2023-09-18** |
+
+> 공식 Validation 320명만 테스트로 쓰면 평가할 정답이 너무 적어서, 두 폴더를 합쳐(여행객 2,880명) 우리가 직접 train / validation / test로 나눠요.
 
 ### 2-2. 관광정보(TourAPI) 데이터
 
@@ -69,7 +75,7 @@ TourAPI 장소 목록(이용허락범위 제한 없음)과 ASOS 날씨 자료(�
 | 항목 | 값 |
 |---|---|
 | 자료형태 | 일자료 |
-| 기간 | 2022-08-01 ~ 2022-11-30 (여행 로그 기간 2022-08-04 ~ 2022-11-13을 포함) |
+| 기간 | 2023-04-01 ~ 2023-09-30 (여행 로그 기간 2023-04-28 ~ 2023-09-18을 포함) |
 | 지점 | 서울·인천·경기 9곳: 동두천(98), 파주(99), 백령도(102), 서울(108), 인천(112), 수원(119), 강화(201), 양평(202), 이천(203) |
 | 요소 | 평균기온, 최저기온, 최고기온, 일강수량 |
 | 형식 | CSV (CP949 인코딩, `pd.read_csv(..., encoding="cp949")`로 읽기) |
