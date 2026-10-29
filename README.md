@@ -90,7 +90,36 @@ TourAPI 장소 목록(이용허락범위 제한 없음)과 ASOS 날씨 자료(�
 pip install -r requirements.txt
 ```
 
-> 전처리와 추천 실행 방법은 코드가 완성되면 추가해요.
+### 3-1. 전처리
+
+`data/raw/TL/`, `data/raw/VL/`에 여행 로그 CSV를 넣은 뒤 실행해요. 결과는 `data/processed/`에 생기고 (git에 안 올라가요), 요약 숫자는 `results/metrics/preprocess_summary.txt`에 남아요. 시드가 고정돼 있어서 누가 돌려도 결과가 같아요.
+
+```bash
+python -m src.preprocessing.preprocess
+```
+
+| 파일 | 내용 | 주로 쓰는 곳 |
+|---|---|---|
+| `visits.csv` | 여행지 방문 (여행객 x 장소 방문 1행), `ITEM_ID`는 같은 장소를 합친 ID | 전체 |
+| `items.csv` | 장소 속성 (유형, 위치, train 통계, TourAPI 매칭, 비 온 날 방문 비율) | CBF, DBSCAN, 보정 |
+| `users.csv` | 여행객 속성 (동반자 그룹, 여행 스타일, 미션·동기), `SPLIT` | CBF, 보정 |
+| `item_features.csv`, `user_features.csv` | 0~1 숫자 특성 행렬 | CBF |
+| `ratings_train.csv` | train 여행객 평점 (MF용 장소만) | MF |
+| `ratings_{val,test}_known.csv` | val·test 여행객의 앞부분 평점 (학습에 같이 넣음) | MF |
+| `ratings_{val,test}_hidden.csv` | val·test 여행객의 여행 뒤쪽 30% (정답) | 평가 |
+| `item_index.csv`, `user_index.csv` | MF 행렬 인덱스 | MF |
+| `user_folds.csv`, `holdout_by_order.csv` | 전체 여행객 5-fold 분할 | 최종 평가 |
+| `sequences.csv`, `transitions.csv` | 여행별 방문 순서, 장소·유형 전이 확률 (train) | 마르코프 체인 |
+| `transactions.csv` | 여행별 장소·유형 집합 | 연관 규칙 |
+| `place_legs.csv`, `place_pairs.csv` | 여행지 -> 다음 여행지 거리(`DIST_KM`)·이동수단 | 코스, 이동 보정 |
+| `weather.csv` | 방문별 날짜, 가장 가까운 ASOS 관측소의 기온·강수량 | 날씨 보정 |
+
+**모델링에서 지킬 것**
+
+- 튜닝은 val로, 최종 점수는 test와 5-fold 평균 ± 편차로 보고해요.
+- 평점의 90%가 4~5점이라 RMSE만 보지 말고 NDCG·Recall 같은 Top-K 지표도 같이 봐요.
+- 이동 비용은 `DIST_KM`을 써요. 원본 시간 기록이 30분 단위라 분 단위 이동시간은 만들지 않았어요.
+- 장소 통계(인기도, 평균 만족도 등)는 train 여행객으로만 계산돼 있어요. 새로 계산할 때도 val·test를 섞지 않아요.
 
 <br>
 
@@ -115,9 +144,11 @@ travel-destination-recsys/
 │   ├── preprocessing/     # 전처리 파트
 │   │   ├── __init__.py
 │   │   ├── collect_tourapi.py  # TourAPI 장소 목록 수집
-│   │   ├── load_data.py   # TL+VL 합치기, 중복 제거 등
-│   │   ├── preprocess.py  # 장소 ID 통일, 필터, 분할 등
-│   │   └── features.py    # TF-IDF, 카테고리 원-핫, 사용자 프로필 등
+│   │   ├── load_data.py   # TL+VL 읽어 합치기
+│   │   ├── places.py      # 같은 장소 합치기 (장소 ID 통일), 사진 GPS로 좌표 채우기
+│   │   ├── external.py    # TourAPI 매칭, ASOS 날씨 붙이기
+│   │   ├── preprocess.py  # 전처리 전체 실행: 필터, 분할, 평점, 코스용 데이터
+│   │   └── features.py    # 카테고리 원-핫, 장소·사용자 특성 행렬
 │   ├── modeling/          # 모델링 파트
 │   │   ├── __init__.py
 │   │   ├── content_based.py
