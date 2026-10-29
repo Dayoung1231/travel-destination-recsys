@@ -7,20 +7,23 @@
 import numpy as np
 import pandas as pd
 
-from src.config import REGIONS, TOURIST_TYPES
+from src.config import COMPANION_GROUPS, REGIONS, TOURIST_TYPES
 
 # TRAVEL_STATUS_ACCOMPANY -> 동반자 그룹.
-# '2인 여행(가족 외)'에 연인과 친구가 같이 들어 있고 데이터로는 구분할 수 없어서 '연인' 그룹은 두지 않는다.
-COMPANION_GROUP = {
-    "나홀로 여행": "solo",
-    "2인 여행(가족 외)": "pair_non_family",
-    "3인 이상 여행(가족 외)": "group_non_family",
-    "자녀 동반 여행": "family_with_kids",
-    "2인 가족 여행": "family_adults",
-    "부모 동반 여행": "family_adults",
-    "3대 동반 여행(친척 포함)": "family_adults",
-    "3인 이상 가족 여행(친척 포함)": "family_adults",
-}
+# TCR 코드: 1 배우자, 2 자녀, 3 부모, 4 조부모, 5 형제/자매, 6 친인척, 7 친구, 8 연인, 9 동료, 10 모임, 11 기타
+FAMILY_ADULTS = {3, 4, 5, 6}
+
+def companion_group(rels, n):
+    """한 여행의 동반자 관계 코드 집합(rels)과 동반자 수(n) -> 동반자 그룹. 위에서부터 먼저 맞는 그룹."""
+    if not rels:
+        return "solo"
+    if 2 in rels:
+        return "family_kids"
+    if n == 1 and rels <= {1, 8}:   # 연인 또는 배우자와 단둘이
+        return "couple"
+    if rels & FAMILY_ADULTS:
+        return "family_adults"
+    return "friends"
 
 # TourAPI 분류체계 대분류(lclsSystm1) 코드
 TOUR_CATS = ("AC", "EV", "EX", "HS", "LS", "VE")
@@ -46,7 +49,8 @@ def build_item_features(items, v, users):
     # 그 장소에 누가 가나: train 방문자 중 동반자 그룹별 비율 (동반자 보정용)
     tr = v[v["SPLIT"] == "train"][["TRAVELER_ID", "ITEM_ID"]].drop_duplicates()
     tr = tr.merge(users[["TRAVELER_ID", "COMPANION_GROUP"]], on="TRAVELER_ID")
-    comp = pd.crosstab(tr["ITEM_ID"], tr["COMPANION_GROUP"], normalize="index").round(4)
+    comp = (pd.crosstab(tr["ITEM_ID"], tr["COMPANION_GROUP"], normalize="index")
+          .reindex(columns=COMPANION_GROUPS, fill_value=0).round(4))
     comp.columns = [f"COMP_{c}" for c in comp.columns]
     f = f.join(comp)
     f[comp.columns] = f[comp.columns].fillna(0)
@@ -58,11 +62,17 @@ def build_item_features(items, v, users):
     return f.reset_index()
 
 
-def build_users(traveller, travel, split_of):
+def build_users(traveller, travel, companion, split_of):
     """여행객 표. 동반자 그룹, 여행 일수, 여행 미션·동기 one-hot을 붙인다."""
     u = traveller.drop(columns="SOURCE").merge(travel.drop(columns="SOURCE"), on="TRAVELER_ID", how="left")
+    comp = (companion.groupby("TRAVEL_ID")
+            .agg(RELS=("REL_CD", lambda s: frozenset(s.dropna().astype(int))),
+                 N_COMP=("REL_CD", "size")))          # N_COMP는 행 수 (len(RELS) 아님)
+    u = u.merge(comp, on="TRAVEL_ID", how="left")
+    u["RELS"] = u["RELS"].apply(lambda x: x if isinstance(x, frozenset) else frozenset())
+    u["N_COMP"] = u["N_COMP"].fillna(0).astype(int)
+    u["COMPANION_GROUP"] = [companion_group(r, n) for r, n in zip(u["RELS"], u["N_COMP"])]
     u["SPLIT"] = u["TRAVELER_ID"].map(split_of)
-    u["COMPANION_GROUP"] = u["TRAVEL_STATUS_ACCOMPANY"].map(COMPANION_GROUP)
     u["GENDER"] = u["GENDER"].map({"남": "M", "여": "F"})
     u["TRAVEL_DAYS"] = (pd.to_datetime(u["TRAVEL_END_YMD"]) - pd.to_datetime(u["TRAVEL_START_YMD"])).dt.days + 1
 
@@ -86,7 +96,7 @@ def build_user_features(users):
     f = pd.DataFrame(index=u.index)
     f["GENDER_F"] = (u["GENDER"] == "F").astype(int)
     f["AGE"] = ((u["AGE_GRP"] - 20) / 40).clip(0, 1).round(3)  # 20대 -> 0, 60대 -> 1
-    for g in sorted(set(COMPANION_GROUP.values())):
+    for g in COMPANION_GROUPS:                       # 기존: sorted(set(COMPANION_GROUP.values()))
         f[f"COMP_{g}"] = (u["COMPANION_GROUP"] == g).astype(int)
     # 여행 스타일은 두 극 사이의 1~7 척도 (자연 1 <-> 도시 7 등)
     for i in range(1, 9):
