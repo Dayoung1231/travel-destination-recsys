@@ -256,6 +256,7 @@ def main():
 
     visit_all, travel = read("visit"), read("travel")
     traveller, photo, activity, move = read("traveller"), read("photo"), read("activity"), read("move")
+    companion = read("companion")
     say(f"원본 방문 기록: {len(visit_all)} (TL {sum(visit_all.SOURCE == 'TL')}, VL {sum(visit_all.SOURCE == 'VL')}), "
         f"여행객 {traveller.TRAVELER_ID.nunique()}")
 
@@ -284,7 +285,7 @@ def main():
         f"MF용 장소 중 {items.loc[items.IN_CF, 'TOUR_ID'].notna().mean():.0%}")
     say(f"  날씨: 방문 {weather.TA_AVG.notna().sum()} / {len(weather)}건에 붙음, 비 온 날 방문 {weather.RAINY.mean():.0%}")
 
-    users = build_users(traveller, travel, split_of)
+    users = build_users(traveller, travel, companion, split_of)
     say("  동반자 그룹: " + ", ".join(f"{k} {n}" for k, n in users.COMPANION_GROUP.value_counts().items()))
 
     r = build_ratings(v, set(items.loc[items.IN_CF, "ITEM_ID"]))

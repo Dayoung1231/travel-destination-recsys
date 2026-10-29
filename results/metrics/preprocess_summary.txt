@@ -6,7 +6,7 @@
 장소: 2008곳, MF용(train 방문자 5명 이상) 138곳, 좌표 없음 121곳
   TourAPI 매칭: 835곳 (42%), MF용 장소 중 90%
   날씨: 방문 5338 / 5338건에 붙음, 비 온 날 방문 25%
-  동반자 그룹: pair_non_family 991, solo 629, family_with_kids 495, family_adults 441, group_non_family 324
+  동반자 그룹: couple 879, family_kids 665, solo 629, friends 480, family_adults 227
 train 평점: 1565, 여행객 1046, 장소 138, 밀도 0.0108
   val: known 198, hidden 45 (채점 여행객 45명)
   test: known 227, hidden 67 (채점 여행객 64명)

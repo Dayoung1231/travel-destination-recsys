@@ -17,6 +17,7 @@ TABLES = {
     "activity": "tn_activity_his_",       # 활동내역
     "move": "tn_move_his_",               # 이동내역
     "codeb": "tc_codeb_",                 # 코드B
+    "companion": "tn_companion_info_",   # 동반자정보
 }
 
 
