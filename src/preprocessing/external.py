@@ -13,6 +13,8 @@ from src.preprocessing.places import dist_m, norm_name, region_of, similar
 
 TOUR_NEAR_M = 300    # 이름이 비슷하면 이 거리 안에서 매칭
 TOUR_PART_M = 1000   # 이름이 같거나 한쪽이 다른 쪽을 품으면 이 거리까지 (테마파크·공원은 넓다)
+TOUR_EVENT_TYPE = "15"  # TourAPI 관광 타입: 축제공연행사
+FESTIVAL_TYPE = 8       # 우리 방문지 유형: 지역 축제
 
 # ASOS 관측소 위치 (기상청 기상자료개방포털 > ASOS 관측지점정보, 2023년 기준 위치. 경도·위도)
 ASOS_STATIONS = {
@@ -40,6 +42,28 @@ def load_tourapi():
     return t
 
 
+def name_rank(rep, names, title, near):
+    """TourAPI 이름 title이 우리 장소 이름과 얼마나 잘 맞는지. 작을수록 좋고, 맞지 않으면 None.
+    rep: 대표 이름, names: 여행객이 쓴 이름들, near: TOUR_NEAR_M 안에 있는지 (모두 norm_name 결과).
+      0 대표 이름과 같음                  '경복궁' / '경복궁'
+      1 여행객이 쓴 다른 이름과 같음
+      2 TourAPI 쪽이 상위 장소            '석촌호수 동호' / '석촌호수'
+      3 TourAPI 쪽이 세부 시설·행사        '서울랜드' / '서울랜드 눈썰매장'
+      4 이름이 비슷함 (near일 때만)        '서울로 717' / '서울로 7017'
+    """
+    if title == rep:
+        return 0
+    if title in names:
+        return 1
+    if len(title) >= 4 and any(len(n) >= 4 and title in n for n in names):
+        return 2
+    if len(title) >= 4 and any(len(n) >= 4 and n in title for n in names):
+        return 3
+    if near and any(similar(n, title) for n in names):
+        return 4
+    return None
+
+
 def match_tourapi(items, v):
     """장소마다 가장 잘 맞는 TourAPI 관광지를 찾는다.
 
@@ -47,27 +71,30 @@ def match_tourapi(items, v):
       - TOUR_NEAR_M 안이고 이름이 비슷함 (places.similar)
       - TOUR_PART_M 안이고 이름이 같거나 한쪽이 다른 쪽을 품음 (4글자 이상)
       - 장소 좌표가 없으면: 이름이 같고 시·도가 같음
-    후보가 여럿이면 가장 가까운 것.
+    후보가 여럿이면 이름이 더 잘 맞는 것(name_rank), 같으면 가장 가까운 것.
+    거리만 보면 '경복궁'이 같은 좌표의 '경복궁 생과방'에 매칭된다.
+    행사(TOUR_EVENT_TYPE)는 이름이 같을 때와 우리 장소가 지역 축제일 때만 후보로 둔다
+    ('시흥갯골생태공원' / '시흥갯골축제'처럼 상설 장소에 행사가 붙지 않게).
     """
     t = load_tourapi()
     tx, ty = t["mapx"].to_numpy(), t["mapy"].to_numpy()
     names = v.groupby("ITEM_ID")["VISIT_AREA_NM"].agg(lambda s: {norm_name(x) for x in s})
     by_name = t.groupby("NORM").indices
+    is_event = (t["contenttypeid"] == TOUR_EVENT_TYPE).to_numpy()
 
     rows = []
     for it in items.itertuples():
         my = names[it.ITEM_ID]
-        best, best_d = None, np.inf
+        rep = norm_name(it.ITEM_NM)
+        best, best_d, best_key = None, np.inf, (np.inf, np.inf)
         if pd.notna(it.X):
             d = dist_m(tx, ty, it.X, it.Y)
             for k in np.flatnonzero(d <= TOUR_PART_M):
-                tn = t.at[k, "NORM"]
-                if d[k] <= TOUR_NEAR_M:
-                    ok = any(similar(n, tn) for n in my)
-                else:
-                    ok = any(n == tn or (min(len(n), len(tn)) >= 4 and (n in tn or tn in n)) for n in my)
-                if ok and d[k] < best_d:
-                    best, best_d = k, d[k]
+                rank = name_rank(rep, my, t.at[k, "NORM"], d[k] <= TOUR_NEAR_M)
+                if rank is None or (is_event[k] and rank > 1 and it.TYPE_CD != FESTIVAL_TYPE):
+                    continue
+                if (rank, d[k]) < best_key:
+                    best, best_d, best_key = k, d[k], (rank, d[k])
         else:
             for n in my:
                 for k in by_name.get(n, []):
