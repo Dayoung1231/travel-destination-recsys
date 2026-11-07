@@ -10,7 +10,8 @@
 
 | Where it is used | Source (URL) | What was taken / changed | Added by |
 |---|---|---|---|
-| `src/modeling/mf.py` (example) | https://albertauyeung.github.io/2017/04/23/python-matrix-factorization.html/ | SGD update rule, rewritten for our data | |
+| `src/modeling/mf.py` `ExplicitMF` | Koren, Bell, Volinsky, "Matrix Factorization Techniques for Recommender Systems", IEEE Computer 2009, https://doi.org/10.1109/MC.2009.263 | Biased MF prediction (mu + b_u + b_i + p_u . q_i) and SGD update rule; implemented from scratch with numpy | |
+| `src/modeling/mf.py` `ImplicitMF` | Hu, Koren, Volinsky, "Collaborative Filtering for Implicit Feedback Datasets", ICDM 2008, https://doi.org/10.1109/ICDM.2008.22 | Confidence weighting c = 1 + alpha and ALS closed-form update (Y^T Y + Y^T (C_u - I) Y trick); implemented from scratch. Fold-in toward a survey-based prior is our own addition | |
 
 ## 2. Libraries and functions not covered in class
 
