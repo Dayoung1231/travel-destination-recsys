@@ -10,6 +10,7 @@
   - 전체 장소에는 val·test 여행객만 간 곳이 섞여 있어서, 그대로 두면 'train 방문자 0명'이라는
     특징만으로 정답을 골라내는 누수가 생긴다.
   - 여행 로그에 수도권 밖 방문(강원 등)도 섞여 있지만 우리 시스템은 수도권 추천이라 뺀다.
+  - 지역 축제는 사용자의 여행 날에 열린다는 보장이 없어서 뺀다. 학습 데이터에는 취향 정보로 남긴다.
 
     from src.modeling.evaluate import evaluate
     mean, per_user = evaluate(model.score, "val", "warm")
@@ -23,6 +24,7 @@ import numpy as np
 import pandas as pd
 
 from src.config import PROCESSED_DIR, REGIONS, SEED, TOP_K
+from src.preprocessing.external import FESTIVAL_TYPE
 
 MODES = ("cold", "warm")
 
@@ -34,10 +36,11 @@ def load_table(name):
 
 
 def catalog():
-    """추천 후보 장소 ID (정렬): train 여행객이 한 번이라도 간 수도권 장소.
+    """추천 후보 장소 ID (정렬): train 여행객이 한 번이라도 간 수도권 장소 중 지역 축제가 아닌 곳.
     주소가 없어 시·도를 모르는 장소는 수도권 여행 로그라 남기고, 수도권 밖으로 확인된 곳만 뺀다."""
     items = load_table("items")
-    ok = (items["N_TRAVELERS"] >= 1) & (items["SIDO"].isin(REGIONS) | items["SIDO"].isna())
+    ok = ((items["N_TRAVELERS"] >= 1) & (items["SIDO"].isin(REGIONS) | items["SIDO"].isna())
+          & (items["TYPE_CD"] != FESTIVAL_TYPE))
     return np.sort(items.loc[ok, "ITEM_ID"].to_numpy())
 
 
