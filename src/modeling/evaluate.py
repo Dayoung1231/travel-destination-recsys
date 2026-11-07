@@ -31,8 +31,9 @@ MODES = ("cold", "warm")
 
 @lru_cache(maxsize=None)
 def load_table(name):
-    """data/processed/<name>.csv. 여러 번 읽지 않게 캐시한다 (받은 표를 직접 수정하지 말 것)."""
-    return pd.read_csv(PROCESSED_DIR / f"{name}.csv")
+    """data/processed/<name>.csv. 여러 번 읽지 않게 캐시한다 (받은 표를 직접 수정하지 말 것).
+    TOUR_CAT1의 NA는 자연관광 코드라서 빈칸만 결측값으로 읽는다."""
+    return pd.read_csv(PROCESSED_DIR / f"{name}.csv", keep_default_na=False, na_values=[""])
 
 
 def catalog():
