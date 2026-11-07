@@ -26,7 +26,7 @@ def companion_group(rels, n):
     return "friends"
 
 # TourAPI 분류체계 대분류(lclsSystm1) 코드
-TOUR_CATS = ("AC", "EV", "EX", "HS", "LS", "VE")
+TOUR_CATS = ("AC", "EV", "EX", "HS", "LS", "NA", "VE")
 
 
 def build_item_features(items, v, users):

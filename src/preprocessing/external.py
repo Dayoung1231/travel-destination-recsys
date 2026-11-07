@@ -36,7 +36,9 @@ RAINY_MM = 1.0  # 일강수량 1mm 이상이면 비 온 날
 # ---------------------------------------------------------------- TourAPI
 
 def load_tourapi():
-    t = pd.read_csv(TOURAPI_DIR / "area_list.csv", dtype={"contentid": str, "contenttypeid": str})
+    # lclsSystm1의 NA는 자연관광 코드라서, pandas가 결측값으로 읽지 않게 빈칸만 결측값으로 둔다
+    t = pd.read_csv(TOURAPI_DIR / "area_list.csv", dtype={"contentid": str, "contenttypeid": str},
+                    keep_default_na=False, na_values=[""])
     t["NORM"] = t["title"].map(norm_name)
     t["SIDO"] = t["addr1"].map(lambda a: region_of(a)[0])
     return t
