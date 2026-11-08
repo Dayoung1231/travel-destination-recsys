@@ -20,8 +20,8 @@ import unicodedata
 import pandas as pd
 
 from src.config import COMPANION_GROUPS, COMPANION_LABELS, REGIONS
-from src.modeling.cbf import (DEFAULT_ADJUST, DEFAULT_MODEL, SURVEY_MISSIONS, SURVEY_MOTIVES, SURVEY_STYLES,
-                              build_model)
+from src.modeling.cbf import (DEFAULT_ADJUST, DEFAULT_MODEL, DEFAULT_TEXT, SURVEY_MISSIONS, SURVEY_MOTIVES,
+                              SURVEY_STYLES, build_model)
 from src.modeling.evaluate import catalog, load_table
 from src.preprocessing.features import build_user_features
 from src.preprocessing.places import norm_name
@@ -187,7 +187,7 @@ def run_survey(items):
 
 def recommend(answers, n=10, model=None):
     """설문 답 -> 추천 표. 가 본 곳은 추천에서 빼고, 지역을 골랐으면 그 지역 장소만 후보로 둔다."""
-    model = model or build_model(DEFAULT_MODEL, **DEFAULT_ADJUST)
+    model = model or build_model(DEFAULT_MODEL, **DEFAULT_ADJUST, text=DEFAULT_TEXT)
     items = load_table("items").set_index("ITEM_ID")
     survey = survey_vector(answers, model.U.columns)
     known = [i for i, _ in answers["visited"]]
