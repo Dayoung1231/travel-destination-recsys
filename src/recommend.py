@@ -10,9 +10,15 @@
   2. 여행 스타일 3문항 (1~7 척도, AI Hub 여행 스타일 문항 중 cbf.SURVEY_STYLES)
   3. 여행 미션(복수 선택), 여행 동기(최대 3개). 보기는 cbf.SURVEY_MISSIONS, SURVEY_MOTIVES
   4. 원하는 지역 (서울 / 경기 / 인천 / 상관없음)
-  5. (선택) 가 본 곳과 만족도 -> 입력하면 이력까지 반영 (warm), 건너뛰면 설문만 (cold)
-문항은 CBF 설문 프로필이 쓰는 항목(cbf.SURVEY_COLS)과 같다.
+  5. (선택) 이번 여행에서 이미 다녀온 곳
+문항은 CBF 설문 프로필이 쓰는 항목(cbf.SURVEY_COLS)과 같다 (MF의 설문 시작점도 같은 항목).
 설문 답은 전처리와 같은 함수(features.build_user_features)로 특성 벡터로 바꾼다.
+
+모델 고르기 (전환형 하이브리드): 다녀온 곳이 없으면 CBF, 있으면 방문 MF로 추천한다.
+  val NDCG@10에서 cold는 CBF(0.155)가 MF(0.130)보다, warm은 MF(0.296)가 CBF(0.177)보다 좋았다.
+  warm 평가는 같은 여행의 앞부분으로 뒷부분을 맞히는 방식이라, 터미널에서도 '이번 여행에서
+  이미 다녀온 곳'을 묻는다. MF는 같은 여행에서 함께 가는 근처 장소를 잘 맞힌다.
+  필요한 모델만 학습한다 (MF 쪽은 Kiwi를 불러오지 않아서 빠르다).
 """
 import argparse
 import unicodedata
@@ -23,6 +29,7 @@ from src.config import COMPANION_GROUPS, COMPANION_LABELS, REGIONS
 from src.modeling.cbf import (DEFAULT_ADJUST, DEFAULT_MODEL, DEFAULT_TEXT, SURVEY_MISSIONS, SURVEY_MOTIVES,
                               SURVEY_STYLES, build_model)
 from src.modeling.evaluate import catalog, load_table
+from src.modeling.mf import DEFAULT_IMPLICIT, ImplicitMF
 from src.preprocessing.features import build_user_features
 from src.preprocessing.places import norm_name
 
@@ -121,9 +128,10 @@ def ask_scale(i, left, right):
 
 
 def ask_visited(items):
-    """가 본 곳을 이름으로 찾아 만족도와 함께 받는다. -> [(ITEM_ID, 만족도)]"""
-    print("\n8. [선택] 수도권에서 가 본 관광지가 있으면 알려 주세요. 취향을 더 잘 맞힐 수 있어요.")
-    print("  장소 이름 일부를 입력하면 찾아 드려요. 다 입력했으면 엔터.")
+    """이번 여행에서 이미 다녀온 곳을 이름으로 찾아 받는다. -> [ITEM_ID]
+    다녀온 곳은 방문 MF가 쓰는데, 방문 MF는 만족도를 쓰지 않아서 만족도는 묻지 않는다."""
+    print("\n8. [선택] 이번 여행에서 이미 다녀온 곳이 있으면 알려 주세요. 다음에 갈 곳을 이어서 추천해요.")
+    print("  (장소 이름 일부를 입력하면 찾아 드려요. 다 입력했으면 엔터를 눌러주세요:))")
     names = items["ITEM_NM"].map(norm_name)
     visited = []
     while True:
@@ -138,12 +146,11 @@ def ask_visited(items):
         k = ask_choice("  어느 곳인가요?", opts + ["이 중에 없음"])
         if k == len(found):
             continue
-        if found.index[k] in [i for i, _ in visited]:  # 두 번 넣으면 이력 프로필에 두 배로 반영된다
+        if found.index[k] in visited:
             print(f"  이미 추가한 곳이에요: {found.iloc[k]['ITEM_NM']}")
             continue
-        sat = ask_choice("  그곳은 얼마나 만족스러웠나요?", ["매우 불만족", "불만족", "보통", "만족", "매우 만족"]) + 1
-        visited.append((found.index[k], sat))
-        print(f"  추가했어요: {found.iloc[k]['ITEM_NM']} (만족도 {sat})")
+        visited.append(found.index[k])
+        print(f"  추가했어요: {found.iloc[k]['ITEM_NM']}")
 
 
 # ---------------------------------------------------------------- 설문 -> 특성 벡터
@@ -185,17 +192,27 @@ def run_survey(items):
 
 # ---------------------------------------------------------------- 실행
 
-def recommend(answers, n=10, model=None):
-    """설문 답 -> 추천 표. 가 본 곳은 추천에서 빼고, 지역을 골랐으면 그 지역 장소만 후보로 둔다."""
-    model = model or build_model(DEFAULT_MODEL, **DEFAULT_ADJUST, text=DEFAULT_TEXT)
+def pick_model(visited, items):
+    """전환형 하이브리드: 다녀온 곳 중 방문 MF가 학습한 장소가 있으면 'mf', 없으면 'cbf'.
+    MF는 train 방문자가 min_travelers명 이상인 장소만 알아서, 모르는 장소만 넣으면 설문만 쓰는 것과 같다
+    (그때는 설문만으로 더 나은 CBF를 쓴다)."""
+    known = [i for i in visited if items.loc[i, "N_TRAVELERS"] >= DEFAULT_IMPLICIT["min_travelers"]]
+    return ("mf", known) if known else ("cbf", [])
+
+
+def recommend(answers, n=10):
+    """설문 답 -> (추천 표, 쓴 모델 'cbf'/'mf'). 다녀온 곳은 추천에서 빼고, 지역을 골랐으면 그 지역 장소만 후보로 둔다."""
     items = load_table("items").set_index("ITEM_ID")
-    survey = survey_vector(answers, model.U.columns)
-    known = [i for i, _ in answers["visited"]]
-    sat = [s for _, s in answers["visited"]]
     cand = pd.Index(catalog())  # 수도권 장소만 ('상관없음'이어도)
     if answers["region"] in REGIONS:
         cand = cand[items.loc[cand, "SIDO"] == answers["region"]]
-    return model.recommend_survey(survey, known, sat, n=n, candidates=cand)
+    cand = cand.difference(answers["visited"])  # MF가 모르는 장소를 골랐어도 다시 추천하지 않게
+    kind, known = pick_model(answers["visited"], items)
+    if kind == "mf":
+        model = ImplicitMF(**DEFAULT_IMPLICIT).fit()
+        return model.recommend_survey(survey_vector(answers, model.U.columns), known, n=n, candidates=cand), kind
+    model = build_model(DEFAULT_MODEL, **DEFAULT_ADJUST, text=DEFAULT_TEXT)
+    return model.recommend_survey(survey_vector(answers, model.U.columns), [], [], n=n, candidates=cand), kind
 
 
 def main():
@@ -206,9 +223,9 @@ def main():
     items = load_table("items").set_index("ITEM_ID")
     answers = run_survey(items)
     print("\n추천을 계산하고 있어요...")
-    rec = recommend(answers, args.n)
+    rec, kind = recommend(answers, args.n)
 
-    basis = (f"설문 + 가 본 곳 {len(answers['visited'])}곳" if answers["visited"] else "설문")
+    basis = (f"설문 + 다녀온 곳 {len(answers['visited'])}곳, 방문 MF" if kind == "mf" else "설문, CBF")
     print("\n" + "=" * 60)
     print(f" 추천 여행지 {len(rec)}곳 ({basis} 기준)")
     print("=" * 60)
