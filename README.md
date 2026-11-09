@@ -2,7 +2,7 @@
 
 Machine Learning Term Project — Team 8
 
-여행 로그 데이터를 학습해 사용자의 여행 스타일, 동반자, 이동 거리·수단, 날씨, 유명 관광지 선호도까지 반영한 개인 맞춤형 수도권(서울·경기·인천) 여행지를 추천하는 시스템
+여행 로그 데이터를 학습해 사용자의 여행 스타일, 동반자, 여행 미션·동기, 유명 관광지 선호도, 이번 여행에서 다녀온 곳을 반영해 개인 맞춤형 수도권(서울·경기·인천) 여행지를 추천하는 시스템
 
 <br>
 
@@ -11,22 +11,23 @@ Machine Learning Term Project — Team 8
 | | |
 |---|---|
 | 분야 | 여행지 추천 |
-| 추천 대상 | 수도권의 관광지 (자연관광지, 문화시설 등) |
+| 추천 대상 | 수도권의 관광지 (자연관광지, 문화시설 등) 1,516곳 |
 | 대상 사용자 | 수도권으로 당일 또는 단기 여행을 계획하는 사용자 |
-| 필터링 기법 | 콘텐츠 기반 필터링 + 모델 기반 협업 필터링 (MF, 직접 구현) |
-| 확장 기능 | 다음 장소·코스 추천 (마르코프 체인, 연관 규칙, DBSCAN) |
+| 필터링 기법 | 콘텐츠 기반 필터링 (CBF) + 모델 기반 협업 필터링 (방문 MF, 직접 구현) |
+| 추천 방식 | 전환형 하이브리드: 설문만 입력하면 CBF, 이번 여행에서 다녀온 곳까지 입력하면 방문 MF |
+| 확장 기능 (예정) | 다음 장소·코스 추천 (마르코프 체인, 연관 규칙, DBSCAN) |
 
 <br>
 
 ## 2. 데이터셋
 
 AI Hub 데이터는 이용 조건상 승인받지 않은 사람에게 제공할 수 없고, 국외 반출도 별도 합의가 필요해서 레포에 **올리지 않아요.** 각자 AI Hub에서 직접 내려받아야 해요.
-TourAPI 장소 목록(이용허락범위 제한 없음)과 ASOS 날씨 자료(공공누리 제1유형)는 재배포할 수 있어서 **레포에 포함해 뒀어요.**
+TourAPI 장소 목록·장소 설명(이용허락범위 제한 없음)과 ASOS 날씨 자료(공공누리 제1유형)는 재배포할 수 있어서 **레포에 포함해 뒀어요.**
 
 | 데이터 | 출처 | 받는 방식 | 위치 |
 |---|---|---|---|
 | 국내 여행로그 데이터(수도권) (2023) | [AI Hub](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71776) | 각자 파일 다운로드 (zip) | `data/raw/TL/`, `data/raw/VL/` |
-| 관광정보 서비스 (TourAPI) | [공공데이터포털](https://www.data.go.kr/data/15101578/openapi.do) | **레포에 포함** | `data/raw/tourapi/area_list.csv` |
+| 관광정보 서비스 (TourAPI) | [공공데이터포털](https://www.data.go.kr/data/15101578/openapi.do) | **레포에 포함** | `data/raw/tourapi/area_list.csv`, `overview.csv` |
 | 종관기상관측(ASOS) 일자료 | [기상자료개방포털](https://data.kma.go.kr/data/grnd/selectAsosRltmList.do?pgmNo=36) | **레포에 포함** | `data/raw/asos/asos_daily.csv` |
 
 ### 2-1. 여행 로그 데이터 받기
@@ -66,6 +67,14 @@ TourAPI 장소 목록(이용허락범위 제한 없음)과 ASOS 날씨 자료(�
    python -m src.preprocessing.collect_tourapi
    ```
 
+**장소 설명 (`overview.csv`)**
+
+CBF의 텍스트 점수(TF-IDF)에 쓰는 장소 설명이에요. 여행 로그 장소와 매칭된 TourAPI 관광지 834곳의 설명(`overview`)을 받아 뒀어요. 그중 4곳은 설명이 비어 있어요. 다시 받으려면 전처리를 먼저 돌린 뒤 실행해요. 이미 받은 장소는 건너뛰어요.
+
+```bash
+python -m src.preprocessing.collect_overview
+```
+
 ### 2-3. 날씨(ASOS) 데이터
 
 `data/raw/asos/asos_daily.csv`가 레포에 들어 있어서 따로 받지 않아도 돼요.
@@ -82,7 +91,7 @@ TourAPI 장소 목록(이용허락범위 제한 없음)과 ASOS 날씨 자료(�
 
 <br>
 
-## 3. 시작하기
+## 3. 실행하기
 
 모든 명령은 프로젝트 최상위 폴더에서 실행해요.
 
@@ -108,38 +117,67 @@ python -m src.preprocessing.preprocess
 | `ratings_{val,test}_known.csv` | val·test 여행객의 앞부분 평점 (학습에 같이 넣음) | MF |
 | `ratings_{val,test}_hidden.csv` | val·test 여행객의 여행 뒤쪽 30% (정답) | 평가 |
 | `item_index.csv`, `user_index.csv` | MF 행렬 인덱스 | MF |
-| `user_folds.csv`, `holdout_by_order.csv` | 전체 여행객 5-fold 분할 | 최종 평가 |
+| `holdout_by_order.csv` | 여행객 x 장소 방문 순서, 여행 뒤쪽 30%면 `HOLDOUT=1` | 평가 (cold·warm), 방문 MF |
+| `user_folds.csv` | 전체 여행객 5-fold 분할 | (현재 미사용) |
 | `sequences.csv`, `transitions.csv` | 여행별 방문 순서, 장소·유형 전이 확률 (train) | 마르코프 체인 |
 | `transactions.csv` | 여행별 장소·유형 집합 | 연관 규칙 |
 | `place_legs.csv`, `place_pairs.csv` | 여행지 -> 다음 여행지 거리(`DIST_KM`)·이동수단 | 코스, 이동 보정 |
 | `weather.csv` | 방문별 날짜, 가장 가까운 ASOS 관측소의 기온·강수량 | 날씨 보정 |
 
-**모델링에서 지킬 것**
 
-- 튜닝은 val로, 최종 점수는 test와 5-fold 평균 ± 편차로 보고해요.
-- 평점의 90%가 4~5점이라 RMSE만 보지 말고 NDCG·Recall 같은 Top-K 지표도 같이 봐요.
-- 이동 비용은 `DIST_KM`을 써요. 원본 시간 기록이 30분 단위라 분 단위 이동시간은 만들지 않았어요.
-- 장소 통계(인기도, 평균 만족도 등)는 train 여행객으로만 계산돼 있어요. 새로 계산할 때도 val·test를 섞지 않아요.
+### 3-2. 모델 학습과 평가
 
-### 동반자 그룹 분류
+전처리를 먼저 돌린 뒤 실행해요. 각 모델이 val로 설정을 비교하고, 결과 표를 `results/metrics/`에 저장해요. 학습된 모델은 따로 저장하지 않아요.
 
-`tn_companion_info`의 여행별 동반자 관계 코드(`REL_CD`)와 동반자 행 수를 이용해 분류한다.
-동반자 수는 서로 같은 관계가 여러 명 있을 수 있으므로 고유 관계 코드 수가 아니라 행 수로 계산한다.
+```bash
+python -m src.modeling.cbf     # 콘텐츠 기반 필터링 -> cbf_val_*.csv
+python -m src.modeling.mf      # 평점 MF, 방문 MF -> mf_val_*.csv
+```
 
-| 그룹 | 분류 기준 |
-|---|---|
-| `solo` | 동반자 기록이 없음 |
-| `couple` | 동반자가 1명이고 관계가 배우자 또는 연인 |
-| `family_kids` | 동반자 관계에 자녀 코드가 포함됨 |
-| `family_adults` | 부모·조부모·형제자매·친인척 코드가 포함됨 |
-| `friends` | 친구·동료·모임 등 나머지 비가족 관계 |
+- `--check`: 여러 사람을 한 번에 채점하는 빠른 평가가 한 사람씩 채점한 결과와 같은지 확인해요. 점수 계산을 고친 뒤 실행해요.
+- `--test`: 고른 설정을 test로 채점해요. **모든 모델이 끝난 뒤 마지막에 한 번만** 써요.
 
-여러 관계가 함께 기록된 여행은 `companion_group()`의 우선순위에 따라 분류한다.
-예를 들어 자녀 코드가 포함되면 다른 관계 코드가 함께 있어도 `family_kids`로 분류한다.
-관계 코드 11(기타)과 미등록 코드는 현재 기본 분류 규칙에 따라 `friends`로 들어가므로, 이 처리도 함께 기록한다.
+**평가 방법** (`src/modeling/evaluate.py`, 모든 모델이 같은 코드로 채점)
 
-TL만 실행했을 때 그룹 분포는 `couple` 769, `family_kids` 590, `solo` 565,
-`friends` 418, `family_adults` 218이었다. TL+VL을 함께 처리하면 분포가 달라질 수 있다.
+| | cold | warm |
+|---|---|---|
+| 상황 | 설문만 입력 | 설문 + 이번 여행에서 다녀온 곳 |
+| 입력 | 없음 | 여행 앞쪽 70% 장소 |
+| 정답 | 그 사람이 간 장소 전부 | 여행 뒤쪽 30% 장소 |
+
+- 후보: train 여행객이 한 번이라도 간 수도권 장소 중 지역 축제를 뺀 1,516곳
+- 지표: Recall@K, NDCG@K, Hit@K (K = 5, 10, 20). 설정을 고르는 기준은 cold·warm NDCG@10 평균이에요.
+
+**모델 요약**
+
+| 모델 | 파일 | 내용 |
+|---|---|---|
+| CBF | `cbf.py`, `text.py` | 장소 속성 27칸(유형, TourAPI 분류, 활동 비율, 체류 시간, 지역)과 사용자 프로필(설문 릿지 회귀 + 다녀온 곳)의 가중 자카드 유사도에 인기도·동반자 보정과 장소 설명 TF-IDF 점수를 더함 |
+| 방문 MF | `mf.py` | 간 곳 1 / 안 간 곳 0에 가중치를 준 행렬 분해를 ALS로 학습. 설문으로 새 사용자 임베딩의 시작점을 만들어 cold에도 추천 |
+| 평점 MF | `mf.py` | 만족도 1~5점 예측 (SGD, RMSE). 평점이 4~5점에 몰려 있어 추천에는 쓰지 않고 비교용으로 둠 |
+
+**val 결과** (NDCG@10)
+
+| 모델 | cold | warm |
+|---|---|---|
+| 무작위 | 0.008 | 0.005 |
+| 인기순 | 0.092 | 0.063 |
+| CBF | **0.155** | 0.177 |
+| 방문 MF | 0.130 | **0.296** |
+
+cold는 CBF, warm은 방문 MF가 좋아서 터미널 추천은 두 모델을 상황에 따라 골라 써요. warm에서 방문 MF가 강한 이유는 같은 여행에서 함께 가는 근처 장소를 잘 맞히기 때문이에요.
+
+### 3-3. 터미널 추천
+
+```bash
+python -m src.recommend            # 추천 10곳
+```
+
+설문 8문항(성별, 연령대, 동반자, 여행 스타일 3문항, 여행 미션·동기, 원하는 지역)에 답하고, 마지막에 이번 여행에서 이미 다녀온 곳을 선택해서 입력해요.
+
+- 다녀온 곳을 입력하지 않으면 **CBF**로 추천해요. 학습과 형태소 분석기 로딩으로 30초 정도 걸려요.
+- 다녀온 곳을 입력하면 **방문 MF**로 추천해요. 2초 안팎이에요.
+- 수도권 장소만 추천하고, 다녀온 곳은 다시 추천하지 않아요.
 
 <br>
 
@@ -154,30 +192,29 @@ travel-destination-recsys/
 ├── data/                  # !! tourapi/, asos/ 말고는 커밋 금지
 │   ├── raw/               #   원본, 수정 금지
 │   │   ├── TL/, VL/       #     AI Hub 여행 로그 (각자 다운로드)
-│   │   ├── tourapi/       #     TourAPI 장소 목록 (레포에 포함)
+│   │   ├── tourapi/       #     TourAPI 장소 목록, 장소 설명 (레포에 포함)
 │   │   └── asos/          #     ASOS 날씨 일자료 (레포에 포함)
 │   └── processed/         #   train / val / test, items, users, visits
 ├── notebooks/             # 탐색용 (01_eda.ipynb …)
 ├── src/
 │   ├── __init__.py
 │   ├── config.py          # 공통 경로·시드·상수
+│   ├── recommend.py       # 터미널 추천 (설문 -> CBF 또는 방문 MF)
 │   ├── preprocessing/     # 전처리 파트
 │   │   ├── __init__.py
-│   │   ├── collect_tourapi.py  # TourAPI 장소 목록 수집
+│   │   ├── collect_tourapi.py   # TourAPI 장소 목록 수집
+│   │   ├── collect_overview.py  # TourAPI 장소 설명 수집
 │   │   ├── load_data.py   # TL+VL 읽어 합치기
 │   │   ├── places.py      # 같은 장소 합치기 (장소 ID 통일), 사진 GPS로 좌표 채우기
 │   │   ├── external.py    # TourAPI 매칭, ASOS 날씨 붙이기
 │   │   ├── preprocess.py  # 전처리 전체 실행: 필터, 분할, 평점, 코스용 데이터
 │   │   └── features.py    # 카테고리 원-핫, 장소·사용자 특성 행렬
-│   ├── modeling/          # 모델링 파트
-│   │   ├── __init__.py
-│   │   ├── content_based.py
-│   │   ├── mf.py          # 직접 구현
-│   │   └── course.py      # (확장) 마르코프 체인, 연관 규칙, DBSCAN
-│   ├── adjust.py          # 동반자·날씨·인기도 점수 보정
-│   ├── evaluate.py        # RMSE, Precision, NDCG
-│   └── plots.py
-├── recommend.py           # 터미널 데모
+│   └── modeling/          # 모델링 파트
+│       ├── __init__.py
+│       ├── evaluate.py    # 공용 평가: 후보 장소, cold·warm 분할, Recall·NDCG·Hit
+│       ├── cbf.py         # 콘텐츠 기반 필터링 (사용자 프로필, 유사도, 점수 보정)
+│       ├── text.py        # 장소 설명 TF-IDF (Kiwi 명사 추출)
+│       └── mf.py          # 평점 MF, 방문 MF (직접 구현)
 └── results/
     ├── figures/           # 발표용 그래프 (커밋 O)
     └── metrics/           # 실행 결과 표·로그 (커밋 O)
@@ -207,11 +244,9 @@ travel-destination-recsys/
 | `model/` | 모델링, 하이퍼파라미터 튜닝, 평가 | `src/modeling/` | `model/tuning-mf` |
 | `common/` | 두 파트가 같이 쓰는 파일 | README, `references.md`, `src/config.py` 등 | `common/readme` |
 
-- 오류 수정도 파트 안에서 해요. 예: `prepro/fix-item-filter`, `model/fix-mf-loss`
-
 ### 커밋 메시지
 
-`타입: 짧은 설명` 형식으로 써요. 콜론(`:`) 뒤에 한 칸 띄워요.
+`타입: 짧은 설명` 형식으로 써요.
 
 | 타입 | 언제 | 예시 |
 |---|---|---|
@@ -231,7 +266,7 @@ travel-destination-recsys/
 
 ## 6. 협업 규칙
 
-- 경로와 공통 상수(시드, 관광 유형 코드 등)는 코드에 직접 쓰지 말고 `src/config.py`에서 가져와요. `C:/Users/...` 같은 절대 경로는 다른 사람 컴퓨터에서 동작하지 않아요.
+- 경로와 공통 상수(시드, 관광 유형 코드 등)는 코드에 직접 쓰지 말고 `src/config.py`에서 가져와요.
 - `data/raw/`의 원본은 수정하지 않아요. 가공한 결과는 `data/processed/`에 저장해요.
 - 노트북(`.ipynb`, 코랩 등)은 출력을 지운 뒤 커밋해요.
 - 발표에 쓸 그래프는 `results/figures/`, 실행 결과 표·로그는 `results/metrics/`에 저장해요.
@@ -244,7 +279,7 @@ travel-destination-recsys/
 
 | 이름 | 역할 |
 |---|---|
-| 노다연 | |
-| 박소윤 | |
-| 지승찬 | |
-| 황다영 | |
+| 노다연 | 모델링 및 평가 |
+| 박소윤 | 전처리 |
+| 지승찬 | 전처리 |
+| 황다영 | 모델링 및 평가 |
