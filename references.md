@@ -17,14 +17,16 @@
 
 | Function / class | Used in | What it does | Parameters we use |
 |---|---|---|---|
-| `sklearn.feature_extraction.text.TfidfVectorizer` (example) | `src/preprocessing/features.py` | Turns place descriptions into TF-IDF vectors | `max_features`: vocabulary size limit, `min_df`: ignore terms in fewer documents |
+| `kiwipiepy.Kiwi` (Korean morphological analyzer, https://github.com/bab2min/kiwipiepy) | `src/modeling/text.py` `nouns()` | Loads the Korean morphological analyzer model. Created once and reused because loading takes a few seconds | Default settings (no parameters) |
+| `Kiwi.tokenize(text)` | `src/modeling/text.py` `nouns()` | Splits a sentence into morphemes. Each token has `form` (the word) and `tag` (part of speech) | `text`: one place description. We keep tokens whose `tag` is `NNG` (common noun) or `NNP` (proper noun), with 2 or more characters, not in our stopword list |
+| `sklearn.feature_extraction.text.TfidfVectorizer` | `src/modeling/text.py` `item_tfidf()` | Turns place descriptions into TF-IDF vectors (place x word). TF-IDF and this class were covered in class (module 8-1); the parameters below go beyond the lecture examples | `tokenizer=nouns`: use Kiwi nouns instead of the default regex split, `token_pattern=None`: turn off the default regex (needed when `tokenizer` is given), `lowercase=False`: no case change for Korean, `min_df=2`: drop words in fewer than 2 places, `max_df=0.5`: drop words in more than half of the places, `sublinear_tf=True`: TF = 1 + ln(tf), `smooth_idf=False`: IDF = ln(N / df) + 1, `norm="l2"`: scale each place vector to length 1 |
 
 ## 3. Datasets
 
 | Data | Source | License / terms |
 |---|---|---|
 | Domestic Travel Log (Seoul Capital Area) (2023) | AI Hub, https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71776 | AI Hub terms: AI training use only, no sharing with unapproved parties, attribution to NIA required |
-| TourAPI Korean Tourism Information Service | Korea Tourism Organization, https://www.data.go.kr/data/15101578/openapi.do | No usage restrictions (images excluded) |
+| TourAPI Korean Tourism Information Service (place list, place descriptions) | Korea Tourism Organization, https://www.data.go.kr/data/15101578/openapi.do | No usage restrictions (images excluded) |
 | ASOS Daily Weather Data | KMA, https://data.kma.go.kr/data/grnd/selectAsosRltmList.do?pgmNo=36 | KOGL Type 1 (attribution) |
 
 **AI Hub attribution** (use in reports and presentations):
