@@ -18,13 +18,19 @@
     내 그룹이 평소보다 많이 가는 곳은 더하고 적게 가는 곳은 뺀다. 방문자가 적은 장소는 비율이 들쭉날쭉해서
     전체 비율 쪽으로 당겨서 쓴다 (COMP_PRIOR명분의 가상 방문자).
   보정 세기(POP, POP_STYLE, COMP)는 val로 고른다.
+텍스트 점수 (장소 설명 TF-IDF, text.py): 최종 점수에 TEXT x 텍스트 점수를 더한다.
+  - 사용자 텍스트 프로필은 장소 벡터와 같은 방식 (이력 + 설문 회귀 혼합)이고, 설명이 있는 장소만 쓴다.
+  - 텍스트 점수 = 후보와의 코사인을 사용자마다 표준화(z-점수)한 값. 설명이 없는 장소는 0 (그 사용자의 평균 위치)
+    이라 설명이 없다는 이유로 유리하거나 불리해지지 않는다.
+  - TF-IDF 칸을 장소 벡터에 그대로 붙이면 단어 칸(약 3,900개)이 기존 특성을 덮어 val 점수가 떨어져서
+    점수를 따로 더하는 방식을 쓴다.
 
 평가는 두 상황으로 나눈다 (evaluate.py).
   - cold: 설문만 입력 -> 설문 프로필만 쓸 수 있다
   - warm: 설문 + 가 본 곳 입력 -> 이력·설문·혼합 프로필 비교
 
 실행 (프로젝트 최상위 폴더에서):
-    python -m src.modeling.cbf            # val로 설정 비교 + 점수 보정 세기 고르기
+    python -m src.modeling.cbf            # val로 설정 비교 + 점수 보정 세기 + 텍스트 점수 세기 고르기
 
     (x)
     python -m src.modeling.cbf --test     # 위에 더해 DEFAULT_MODEL의 보정 전·후를 test로 채점 (마지막에 한 번만)
@@ -38,6 +44,7 @@ import pandas as pd
 from src.config import COMPANION_GROUPS, METRIC_DIR, TOP_K
 from src.modeling.evaluate import (catalog, evaluate, evaluate_matrix, load_split, load_table, popularity_scorer,
                                    split_matrix)
+from src.modeling.text import item_tfidf
 
 # 설문 프로필에 쓰는 설문 항목 (터미널 설문 문항과 같아야 함).
 # 하나씩 빼 보며 val 점수를 비교해서, 빼도 떨어지지 않은 항목은 뺐다 (47개 -> 27개, 차이 유의하지 않음):
@@ -70,6 +77,9 @@ COMP_PRIOR = 5  # 동반자 비율을 전체 비율 쪽으로 당길 때의 가�
 # 터미널 추천에 쓰는 보정 세기 (val 그리드에서 cold·warm NDCG@10 평균 1등).
 # 인기도 0.5는 그리드 안쪽의 최고점. 개인화(pop_style)와 동반자(comp)는 더해도 차이가 작다
 DEFAULT_ADJUST = {"pop": 0.5, "pop_style": 0.4, "comp": 0.02}
+# 텍스트 점수 세기 후보 (val 그리드, DEFAULT_ADJUST와 함께)와 터미널 추천에 쓰는 값
+TEXT_GRID = (0, 0.01, 0.02, 0.05, 0.1, 0.2)
+DEFAULT_TEXT = 0.1
 
 
 def similarity(p, X, method="cosine"):
@@ -89,10 +99,11 @@ def similarity(p, X, method="cosine"):
 
 class CBF:
     def __init__(self, features="content", profile="hybrid", sim="cosine", shrink=SHRINK, ridge=RIDGE,
-                 pop=0, pop_style=0, comp=0):
+                 pop=0, pop_style=0, comp=0, text=0):
         self.features, self.profile_type, self.sim = features, profile, sim
         self.shrink, self.ridge = shrink, ridge
         self.pop, self.pop_style, self.comp = pop, pop_style, comp  # 점수 보정 세기 (fit 없이 바꿔도 됨)
+        self.text = text  # 텍스트 점수 세기 (fit 없이 바꿔도 됨)
 
     def fit(self):
         """장소 벡터를 준비하고, train 여행객으로 설문 -> 장소 벡터 회귀(W)를 푼다."""
@@ -123,7 +134,44 @@ class CBF:
                  .value_counts(normalize=True).reindex(COMPANION_GROUPS).to_numpy())
         share = (f[cols].to_numpy() * n.to_numpy()[:, None] + COMP_PRIOR * prior) / (n.to_numpy()[:, None] + COMP_PRIOR)
         self.comp_lift = pd.DataFrame(np.log(share / prior), index=f.index, columns=COMPANION_GROUPS)
+
+        # 텍스트: 장소 설명 TF-IDF와 설문 -> 텍스트 프로필 회귀 (설명이 있는 장소만, 장소 벡터 W와 같은 방법)
+        ids, self.Xt, has, _ = item_tfidf()
+        self.tpos = pd.Series(np.arange(len(ids)), index=ids)
+        self.has_text = pd.Series(has, index=ids)
+        tt = tr[tr["ITEM_ID"].map(self.has_text).fillna(False).astype(bool)]
+        Tt = pd.DataFrame(self.Xt[self.tpos[tt["ITEM_ID"]].to_numpy()]).groupby(tt["TRAVELER_ID"].to_numpy()).mean()
+        At = np.hstack([np.ones((len(Tt), 1)), self.U.loc[Tt.index].to_numpy()])
+        self.Wt = np.linalg.solve(At.T @ At + reg, At.T @ Tt.to_numpy())
         return self
+
+    def text_profile(self, survey, known, sat):
+        """텍스트 공간의 사용자 프로필. make_profile과 같은 규칙이고, 가 본 곳 중 설명이 있는 곳만 쓴다."""
+        p = np.r_[1.0, survey] @ self.Wt
+        keep = [k for k, i in enumerate(known) if self.has_text.get(i, False)]
+        if self.profile_type == "survey" or not keep:
+            return p
+        w = (np.nan_to_num(np.asarray(sat, dtype=float)[keep], nan=3.0) - 2).clip(min=0)
+        if w.sum() == 0:
+            w = np.ones(len(keep))
+        hist = w @ self.Xt[self.tpos[[known[k] for k in keep]].to_numpy()] / w.sum()
+        if self.profile_type == "history":
+            return hist
+        a = len(keep) / (len(keep) + self.shrink)
+        return a * hist + (1 - a) * p
+
+    def text_score(self, survey, known, sat, candidates):
+        """후보마다 텍스트 점수: 프로필과의 코사인을 설명이 있는 후보끼리 z-점수로 바꾼 값, 설명이 없으면 0."""
+        known = list(known)
+        sat = [np.nan] * len(known) if sat is None else sat
+        p = self.text_profile(survey, known, sat)
+        rows = self.tpos[candidates].to_numpy()
+        hc = self.has_text.to_numpy()[rows]
+        z = np.zeros(len(rows))
+        if hc.sum() > 1:
+            s = similarity(p, self.Xt[rows[hc]], "cosine")
+            z[hc] = (s - s.mean()) / (s.std() + 1e-12)
+        return z
 
     def history_profile(self, known, sat):
         """가 본 곳 벡터의 가중 평균. sat는 장소마다 만족도 1~5 (모르면 nan -> 3점으로 취급)."""
@@ -156,9 +204,12 @@ class CBF:
                 + self.comp * self.comp_lift.loc[candidates, group].to_numpy())
 
     def score_survey(self, survey, known, sat, candidates):
-        """설문 벡터와 가 본 곳(+만족도)으로 후보 장소마다 최종 점수 = 유사도 + 점수 보정."""
+        """설문 벡터와 가 본 곳(+만족도)으로 후보 장소마다 최종 점수 = 유사도 + 점수 보정 + 텍스트 점수."""
         p = self.make_profile(survey, known, sat)
-        return similarity(p, self.X.loc[candidates].to_numpy(), self.sim) + self.adjustment(survey, candidates)
+        s = similarity(p, self.X.loc[candidates].to_numpy(), self.sim) + self.adjustment(survey, candidates)
+        if self.text:
+            s = s + self.text * self.text_score(survey, known, sat, candidates)
+        return s
 
     def known_sat(self, tid, known):
         """데이터에 있는 여행객이 known 장소에 준 만족도 (없으면 nan)."""
@@ -171,10 +222,11 @@ class CBF:
     # ------------------------------------------------ 빠른 평가 (여러 설정 비교용, 결과는 score와 같다)
 
     def score_parts(self, split, mode):
-        """split·mode 여행객 전체의 점수 재료. 최종 점수 = S + (pop + pop_style x (q6 - 0.5)) x P + comp x L.
-        유사도 S는 보정 세기와 상관없어서, 세기를 바꿔 가며 비교할 때 한 번만 계산해 다시 쓴다.
+        """split·mode 여행객 전체의 점수 재료.
+        최종 점수 = S + (pop + pop_style x (q6 - 0.5)) x P + comp x L + text x Z.
+        유사도 S와 텍스트 점수 Z는 세기와 상관없어서, 세기를 바꿔 가며 비교할 때 한 번만 계산해 다시 쓴다.
         장소 행렬도 후보마다 한 번만 꺼낸다 (여행객마다 .loc으로 꺼내는 게 가장 느렸다).
-        Returns S (여행객 x 후보), q6 (여행객,), P (후보,), L (여행객 x 후보). 행은 split_matrix, 열은 catalog() 순서"""
+        Returns S, Z (여행객 x 후보), q6 (여행객,), P (후보,), L (여행객 x 후보). 행은 split_matrix, 열은 catalog() 순서"""
         known, _, cand = load_split(split, mode)
         tids = split_matrix(split, mode)[0]
         Xc = self.X.loc[cand].to_numpy()
@@ -184,12 +236,14 @@ class CBF:
         q6 = U[:, self.U.columns.get_loc("STYL_6")]
         group = U[:, [self.U.columns.get_loc(f"COMP_{g}") for g in COMPANION_GROUPS]].argmax(axis=1)
         L = self.comp_lift.loc[cand].to_numpy()[:, group].T
-        return S, q6, self.popularity.loc[cand].to_numpy(), L
+        Z = np.vstack([self.text_score(u, known[t], self.known_sat(t, known[t]), cand) for t, u in zip(tids, U)])
+        return S, Z, q6, self.popularity.loc[cand].to_numpy(), L
 
-    def combine(self, S, q6, P, L):
-        """score_parts의 재료에 지금 보정 세기를 적용한 점수 행렬 (adjustment와 같은 계산)."""
+    def combine(self, S, Z, q6, P, L):
+        """score_parts의 재료에 지금 세기를 적용한 점수 행렬 (score_survey와 같은 계산)."""
         pop_w = self.pop + self.pop_style * (q6 - 0.5)
-        return S + (pop_w[:, None] * P + self.comp * L)
+        s = S + (pop_w[:, None] * P + self.comp * L)
+        return s + self.text * Z if self.text else s
 
     def score_matrix(self, split, mode):
         """evaluate_matrix에 넘기는 점수 행렬 (여행객 x 후보)."""
@@ -211,7 +265,7 @@ class CBF:
 
 
 def build_model(name, **adjust):
-    """'cbf/<특성 구성>/<프로필>/<유사도>' -> 학습한 CBF. adjust: pop, pop_style, comp (점수 보정 세기)"""
+    """'cbf/<특성 구성>/<프로필>/<유사도>' -> 학습한 CBF. adjust: pop, pop_style, comp (점수 보정 세기), text"""
     _, feat, prof, sim = name.split("/")
     return CBF(feat, prof, sim, **adjust).fit()
 
@@ -236,10 +290,28 @@ def tune_adjustment(name):
     return pd.DataFrame(rows).round(4)
 
 
+def tune_text(name, adjust):
+    """name 설정 + adjust 보정에 텍스트 점수 세기를 TEXT_GRID로 바꿔 가며 val cold·warm을 채점한다."""
+    model = build_model(name, **adjust)
+    parts = {mode: model.score_parts("val", mode) for mode in ("cold", "warm")}
+    rows = []
+    for text in TEXT_GRID:
+        model.text = text
+        row = {"text": text}
+        for mode, p in parts.items():
+            mean = evaluate_matrix(model.combine(*p), "val", mode)[0]
+            row.update({f"{mode} {k}": v for k, v in mean.items()})
+        row["SELECT"] = (row[f"cold {MAIN_METRIC}"] + row[f"warm {MAIN_METRIC}"]) / 2
+        rows.append(row)
+    return pd.DataFrame(rows).round(4)
+
+
 def check_fast_path():
     """빠른 평가가 여행객 한 명씩 채점하는 evaluate와 같은 결과를 내는지 확인한다 (점수 계산을 고친 뒤 실행).
     한 사람용(score)과 여러 사람용(score_matrix) 코드가 두 벌이라 한쪽만 고쳐 어긋나는 것을 막는다."""
-    for name, adjust in ((DEFAULT_MODEL, {}), (DEFAULT_MODEL, DEFAULT_ADJUST), ("cbf/content/survey/cosine", {})):
+    checks = ((DEFAULT_MODEL, {}), (DEFAULT_MODEL, DEFAULT_ADJUST), (DEFAULT_MODEL, {**DEFAULT_ADJUST, "text": DEFAULT_TEXT}),
+              ("cbf/content/survey/cosine", {"text": DEFAULT_TEXT}))
+    for name, adjust in checks:
         model = build_model(name, **adjust)
         for mode in ("cold", "warm"):
             slow = evaluate(model.score, "val", mode)[1].set_index("TRAVELER_ID")
@@ -253,7 +325,7 @@ def check_fast_path():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--test", action="store_true", help="DEFAULT_MODEL의 보정 전·후와 인기도를 test로 채점")
+    ap.add_argument("--test", action="store_true", help="DEFAULT_MODEL의 보정·텍스트 전후와 인기도를 test로 채점")
     ap.add_argument("--check", action="store_true", help="빠른 평가(evaluate_matrix)가 evaluate와 같은 결과인지만 확인")
     args = ap.parse_args()
     if args.check:
@@ -291,11 +363,20 @@ def main():
     adjust = summary.loc["둘 다", ["pop", "pop_style", "comp"]].to_dict()
     print(f"  -> 고른 보정 세기 {adjust} (터미널 추천에 쓰려면 DEFAULT_ADJUST에 반영)")
 
+    # 텍스트 점수: 터미널 추천의 보정(DEFAULT_ADJUST)에 장소 설명 TF-IDF 점수 세기를 바꿔 가며 비교
+    tgrid = tune_text(DEFAULT_MODEL, DEFAULT_ADJUST)
+    tgrid.to_csv(METRIC_DIR / "cbf_val_text.csv", index=False)
+    tcols = ["text"] + [f"{m} {k}" for m in ("cold", "warm") for k in (MAIN_METRIC, "Recall@20")]
+    print(f"\n[val / 텍스트 점수] {DEFAULT_MODEL} + 보정, 텍스트 점수 세기별")
+    print(tgrid[tcols].to_string(index=False))
+    text = float(tgrid.loc[tgrid["SELECT"].idxmax(), "text"])
+    print(f"  -> 고른 텍스트 세기 {text} (터미널 추천에 쓰려면 DEFAULT_TEXT에 반영)")
+
     # 예시: val 여행객 한 명. cold는 설문만, warm은 앞에서 간 곳까지 보고 추천
     known, hidden, _ = load_split("val", "warm")
     tid = next(iter(hidden))
-    model = build_model(DEFAULT_MODEL, **adjust)
-    print(f"\n예시 여행객 {tid} ({DEFAULT_MODEL} + 보정)")
+    model = build_model(DEFAULT_MODEL, **adjust, text=text)
+    print(f"\n예시 여행객 {tid} ({DEFAULT_MODEL} + 보정 + 텍스트)")
     print("  앞에서 간 곳:", ", ".join(items.loc[known[tid], "ITEM_NM"]))
     print("  뒤에서 간 곳:", ", ".join(items.loc[hidden[tid], "ITEM_NM"]))
     for mode, given in (("cold", []), ("warm", known[tid])):
@@ -303,12 +384,13 @@ def main():
         print(model.recommend(tid, given).to_string())
 
     if args.test:
-        base = build_model(DEFAULT_MODEL)
+        base, adjusted = build_model(DEFAULT_MODEL), build_model(DEFAULT_MODEL, **adjust)
         for mode in ("cold", "warm"):
             test = pd.DataFrame({
                 "popularity": evaluate(popularity_scorer(), "test", mode)[0],
                 DEFAULT_MODEL: evaluate_matrix(base.score_matrix("test", mode), "test", mode)[0],
-                f"{DEFAULT_MODEL} + 보정": evaluate_matrix(model.score_matrix("test", mode), "test", mode)[0],
+                f"{DEFAULT_MODEL} + 보정": evaluate_matrix(adjusted.score_matrix("test", mode), "test", mode)[0],
+                f"{DEFAULT_MODEL} + 보정 + 텍스트": evaluate_matrix(model.score_matrix("test", mode), "test", mode)[0],
             }).T.round(4)
             test.index.name = "MODEL"
             test.to_csv(METRIC_DIR / f"cbf_test_{mode}.csv")

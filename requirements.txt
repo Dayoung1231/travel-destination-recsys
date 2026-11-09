@@ -6,3 +6,4 @@ scipy>=1.18         # chi-square test, t-test
 matplotlib>=3.11
 requests>=2.32      # TourAPI 호출
 python-dotenv>=1.0  # .env에서 API 키 읽기
+kiwipiepy>=0.24     # 한국어 명사 추출 (장소 설명 TF-IDF)
