@@ -160,12 +160,25 @@ python -m src.modeling.mf      # 평점 MF, 방문 MF -> mf_val_*.csv
 
 | 모델 | cold | warm |
 |---|---|---|
-| 무작위 | 0.008 | 0.005 |
+| 무작위 (20번 평균) | 0.004 | 0.003 |
 | 인기순 | 0.092 | 0.063 |
 | CBF | **0.155** | 0.177 |
 | 방문 MF | 0.130 | **0.296** |
 
 cold는 CBF, warm은 방문 MF가 좋아서 터미널 추천은 두 모델을 상황에 따라 골라 써요. warm에서 방문 MF가 강한 이유는 같은 여행에서 함께 가는 근처 장소를 잘 맞히기 때문이에요.
+
+**그래프** (cbf.py, mf.py를 먼저 실행한 뒤)
+
+```bash
+python -m src.plots      # results/figures/val_*.png, 그래프 숫자는 results/metrics/plots_val_summary.csv
+```
+
+| 파일 | 내용 |
+|---|---|
+| `val_1_models.png` | 모델 비교 (무작위, 인기순, 평점 MF, CBF, 방문 MF), 95% 신뢰구간 |
+| `val_2_cbf_steps.png` | CBF 단계별 성능과 직전 단계 대비 p값 |
+| `val_3_warm_region.png` | warm을 같은 시·군·구 정답 유무로 나눈 비교 |
+| `val_4_tuning.png` | CBF 텍스트 세기, 방문 MF의 k·alpha 설정 곡선 |
 
 ### 3-3. 터미널 추천
 
@@ -195,11 +208,11 @@ travel-destination-recsys/
 │   │   ├── tourapi/       #     TourAPI 장소 목록, 장소 설명 (레포에 포함)
 │   │   └── asos/          #     ASOS 날씨 일자료 (레포에 포함)
 │   └── processed/         #   train / val / test, items, users, visits
-├── notebooks/             # 탐색용 (01_eda.ipynb …)
 ├── src/
 │   ├── __init__.py
 │   ├── config.py          # 공통 경로·시드·상수
 │   ├── recommend.py       # 터미널 추천 (설문 -> CBF 또는 방문 MF)
+│   ├── plots.py           # 발표용 성능 그래프
 │   ├── preprocessing/     # 전처리 파트
 │   │   ├── __init__.py
 │   │   ├── collect_tourapi.py   # TourAPI 장소 목록 수집
@@ -215,9 +228,13 @@ travel-destination-recsys/
 │       ├── cbf.py         # 콘텐츠 기반 필터링 (사용자 프로필, 유사도, 점수 보정)
 │       ├── text.py        # 장소 설명 TF-IDF (Kiwi 명사 추출)
 │       └── mf.py          # 평점 MF, 방문 MF (직접 구현)
-└── results/
-    ├── figures/           # 발표용 그래프 (커밋 O)
-    └── metrics/           # 실행 결과 표·로그 (커밋 O)
+└── results/               # 실행 결과 (커밋 O)
+    ├── figures/           # 발표용 그래프: val_1_models.png … val_4_tuning.png (plots.py)
+    └── metrics/           # 실행 결과 표·로그
+        ├── preprocess_summary.txt  # 전처리 요약 숫자 (preprocess.py)
+        ├── cbf_val_*.csv          # CBF 설정·보정·텍스트 세기 비교 (cbf.py)
+        ├── mf_val_*.csv           # 평점 MF RMSE, 방문 MF 그리드 (mf.py)
+        └── plots_val_summary.csv  # 그래프에 쓴 평균·95% 신뢰구간 (plots.py)
 ```
 
 <br>
@@ -240,7 +257,7 @@ travel-destination-recsys/
 
 | 파트 | 언제 | 주로 고치는 폴더 | 예시 |
 |---|---|---|---|
-| `prepro/` | 전처리, EDA | `src/preprocessing/`, `notebooks/` | `prepro/split` |
+| `prepro/` | 전처리, EDA | `src/preprocessing/` | `prepro/split` |
 | `model/` | 모델링, 하이퍼파라미터 튜닝, 평가 | `src/modeling/` | `model/tuning-mf` |
 | `common/` | 두 파트가 같이 쓰는 파일 | README, `references.md`, `src/config.py` 등 | `common/readme` |
 
@@ -268,7 +285,6 @@ travel-destination-recsys/
 
 - 경로와 공통 상수(시드, 관광 유형 코드 등)는 코드에 직접 쓰지 말고 `src/config.py`에서 가져와요.
 - `data/raw/`의 원본은 수정하지 않아요. 가공한 결과는 `data/processed/`에 저장해요.
-- 노트북(`.ipynb`, 코랩 등)은 출력을 지운 뒤 커밋해요.
 - 발표에 쓸 그래프는 `results/figures/`, 실행 결과 표·로그는 `results/metrics/`에 저장해요.
 - 인터넷(블로그, Kaggle, GitHub 등)의 코드를 참고했으면 코드 옆 주석과 [references.md](references.md)에 **출처를 남겨요.**
 - 수업에서 다루지 않은 모듈·클래스·라이브러리·함수는 [references.md](references.md)에 파라미터까지 설명해요.
@@ -279,7 +295,7 @@ travel-destination-recsys/
 
 | 이름 | 역할 |
 |---|---|
-| 노다연 | 모델링 및 평가 |
-| 박소윤 | 전처리 |
+| 노다연 | 전처리 |
+| 박소윤 | 모델링 및 평가 |
 | 지승찬 | 전처리 |
 | 황다영 | 모델링 및 평가 |
