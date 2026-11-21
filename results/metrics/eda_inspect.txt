@@ -1,0 +1,335 @@
+===== 원본 방문지정보 (TL+VL) =====
+크기 (행, 열): (24154, 23)
+
+--- 열별 자료형과 결측치 ---
+                      자료형  결측치 결측 비율
+VISIT_AREA_ID          int64       0      0.0%
+TRAVEL_ID                str       0      0.0%
+VISIT_ORDER            int64       0      0.0%
+VISIT_AREA_NM            str       0      0.0%
+VISIT_START_YMD          str       0      0.0%
+VISIT_END_YMD            str       0      0.0%
+ROAD_NM_ADDR             str    3458     14.3%
+LOTNO_ADDR               str    5975     24.7%
+X_COORD              float64    7815     32.4%
+Y_COORD              float64    7815     32.4%
+ROAD_NM_CD           float64   22624     93.7%
+LOTNO_CD             float64   22624     93.7%
+POI_ID                   str    7538     31.2%
+POI_NM                   str    7538     31.2%
+RESIDENCE_TIME_MIN   float64    2883     11.9%
+VISIT_AREA_TYPE_CD     int64       0      0.0%
+REVISIT_YN               str    6351     26.3%
+VISIT_CHC_REASON_CD  float64    6322     26.2%
+LODGING_TYPE_CD      float64   22825     94.5%
+DGSTFN               float64    6359     26.3%
+REVISIT_INTENTION    float64    6359     26.3%
+RCMDTN_INTENTION     float64    6359     26.3%
+SGG_CD               float64   18124     75.0%
+
+--- 숫자 열 통계 ---
+       RESIDENCE_TIME_MIN    DGSTFN  REVISIT_INTENTION  RCMDTN_INTENTION
+count            21271.00  17795.00           17795.00          17795.00
+mean               124.83      4.29               4.10              4.18
+std                186.80      0.82               0.98              0.91
+min                  0.00      1.00               1.00              1.00
+25%                 30.00      4.00               3.00              4.00
+50%                 60.00      4.00               4.00              4.00
+75%                120.00      5.00               5.00              5.00
+max               2280.00      5.00               5.00              5.00
+
+===== 원본 방문지정보 중 추천에 쓰는 열 =====
+전체 23개 열 중 13개, 24,154행
+
+--- 열별 자료형과 결측치 ---
+                     자료형  결측치 결측 비율
+TRAVEL_ID               str       0      0.0%
+VISIT_AREA_ID         int64       0      0.0%
+VISIT_ORDER           int64       0      0.0%
+VISIT_AREA_NM           str       0      0.0%
+POI_ID                  str    7538     31.2%
+X_COORD             float64    7815     32.4%
+Y_COORD             float64    7815     32.4%
+ROAD_NM_ADDR            str    3458     14.3%
+LOTNO_ADDR              str    5975     24.7%
+VISIT_AREA_TYPE_CD    int64       0      0.0%
+RESIDENCE_TIME_MIN  float64    2883     11.9%
+DGSTFN              float64    6359     26.3%
+VISIT_START_YMD         str       0      0.0%
+
+--- 숫자 열 통계 ---
+       VISIT_ORDER  RESIDENCE_TIME_MIN    DGSTFN
+count     24154.00            21271.00  17795.00
+mean          5.92              124.83      4.29
+std           4.69              186.80      0.82
+min           1.00                0.00      1.00
+25%           3.00               30.00      4.00
+50%           5.00               60.00      4.00
+75%           8.00              120.00      5.00
+max          40.00             2280.00      5.00
+
+===== 원본 여행객 Master (TL+VL) =====
+크기 (행, 열): (2880, 36)
+
+--- 열별 자료형과 결측치 ---
+                            자료형  결측치 결측 비율
+TRAVELER_ID                    str       0      0.0%
+RESIDENCE_SGG_CD             int64       0      0.0%
+GENDER                         str       0      0.0%
+AGE_GRP                      int64       0      0.0%
+EDU_NM                       int64       0      0.0%
+EDU_FNSH_SE                float64       2      0.1%
+MARR_STTS                    int64       0      0.0%
+FAMILY_MEMB                  int64       0      0.0%
+JOB_NM                       int64       0      0.0%
+JOB_ETC                    float64    2880    100.0%
+INCOME                       int64       0      0.0%
+HOUSE_INCOME               float64     619     21.5%
+TRAVEL_TERM                  int64       0      0.0%
+TRAVEL_NUM                   int64       0      0.0%
+TRAVEL_LIKE_SIDO_1           int64       0      0.0%
+TRAVEL_LIKE_SGG_1            int64       0      0.0%
+TRAVEL_LIKE_SIDO_2           int64       0      0.0%
+TRAVEL_LIKE_SGG_2            int64       0      0.0%
+TRAVEL_LIKE_SIDO_3           int64       0      0.0%
+TRAVEL_LIKE_SGG_3            int64       0      0.0%
+TRAVEL_STYL_1                int64       0      0.0%
+TRAVEL_STYL_2                int64       0      0.0%
+TRAVEL_STYL_3                int64       0      0.0%
+TRAVEL_STYL_4                int64       0      0.0%
+TRAVEL_STYL_5                int64       0      0.0%
+TRAVEL_STYL_6                int64       0      0.0%
+TRAVEL_STYL_7                int64       0      0.0%
+TRAVEL_STYL_8                int64       0      0.0%
+TRAVEL_STATUS_RESIDENCE        str       0      0.0%
+TRAVEL_STATUS_DESTINATION      str       0      0.0%
+TRAVEL_STATUS_ACCOMPANY        str       0      0.0%
+TRAVEL_STATUS_YMD              str       0      0.0%
+TRAVEL_MOTIVE_1              int64       0      0.0%
+TRAVEL_MOTIVE_2            float64     107      3.7%
+TRAVEL_MOTIVE_3            float64     231      8.0%
+TRAVEL_COMPANIONS_NUM        int64       0      0.0%
+
+--- 숫자 열 통계 ---
+       AGE_GRP  TRAVEL_NUM  TRAVEL_COMPANIONS_NUM  TRAVEL_STYL_1  TRAVEL_STYL_2  TRAVEL_STYL_3  TRAVEL_STYL_4  TRAVEL_STYL_5  TRAVEL_STYL_6  TRAVEL_STYL_7  TRAVEL_STYL_8
+count  2880.00     2880.00                2880.00        2880.00        2880.00        2880.00        2880.00        2880.00        2880.00        2880.00        2880.00
+mean     31.10        2.75                   1.38           3.19           2.89           2.77           3.22           3.63           3.74           3.70           4.93
+std      11.76        2.37                   1.46           1.71           1.74           1.62           1.59           1.81           1.68           1.98           1.76
+min      20.00        1.00                   0.00           1.00           1.00           1.00           1.00           1.00           1.00           1.00           1.00
+25%      20.00        1.00                   1.00           2.00           1.00           1.00           2.00           2.00           2.00           2.00           4.00
+50%      30.00        2.00                   1.00           3.00           2.00           2.00           3.00           4.00           4.00           3.00           5.00
+75%      40.00        4.00                   2.00           4.00           4.00           4.00           4.00           5.00           5.00           6.00           6.00
+max      60.00       44.00                  20.00           7.00           7.00           7.00           7.00           7.00           7.00           7.00           7.00
+
+===== 원본 여행객 Master 중 추천에 쓰는 열 =====
+전체 36개 열 중 9개, 2,880행
+
+--- 열별 자료형과 결측치 ---
+                  자료형  결측치 결측 비율
+TRAVELER_ID          str       0      0.0%
+GENDER               str       0      0.0%
+AGE_GRP            int64       0      0.0%
+TRAVEL_STYL_1      int64       0      0.0%
+TRAVEL_STYL_5      int64       0      0.0%
+TRAVEL_STYL_6      int64       0      0.0%
+TRAVEL_MOTIVE_1    int64       0      0.0%
+TRAVEL_MOTIVE_2  float64     107      3.7%
+TRAVEL_MOTIVE_3  float64     231      8.0%
+
+--- 숫자 열 통계 ---
+       AGE_GRP  TRAVEL_STYL_1  TRAVEL_STYL_5  TRAVEL_STYL_6
+count  2880.00        2880.00        2880.00        2880.00
+mean     31.10           3.19           3.63           3.74
+std      11.76           1.71           1.81           1.68
+min      20.00           1.00           1.00           1.00
+25%      20.00           2.00           2.00           2.00
+50%      30.00           3.00           4.00           4.00
+75%      40.00           4.00           5.00           5.00
+max      60.00           7.00           7.00           7.00
+
+===== 원본 여행 (TL+VL) =====
+크기 (행, 열): (2880, 10)
+
+--- 열별 자료형과 결측치 ---
+                     자료형  결측치 결측 비율
+TRAVEL_ID               str       0      0.0%
+TRAVEL_NM               str       0      0.0%
+TRAVELER_ID             str       0      0.0%
+TRAVEL_PURPOSE          str       0      0.0%
+TRAVEL_START_YMD        str       0      0.0%
+TRAVEL_END_YMD          str       0      0.0%
+MVMN_NM                 str     346     12.0%
+TRAVEL_PERSONA          str       0      0.0%
+TRAVEL_MISSION          str       0      0.0%
+TRAVEL_MISSION_CHECK    str       0      0.0%
+
+--- 숫자 열 통계 ---
+통계를 낼 숫자 열 없음 (문자열이거나 ID·코드)
+
+===== 원본 여행 중 추천에 쓰는 열 =====
+전체 10개 열 중 3개, 2,880행
+
+--- 열별 자료형과 결측치 ---
+                     자료형  결측치 결측 비율
+TRAVEL_ID               str       0      0.0%
+TRAVELER_ID             str       0      0.0%
+TRAVEL_MISSION_CHECK    str       0      0.0%
+
+--- 숫자 열 통계 ---
+통계를 낼 숫자 열 없음 (문자열이거나 ID·코드)
+
+===== 원본 동반자정보 (TL+VL) =====
+크기 (행, 열): (3977, 6)
+
+--- 열별 자료형과 결측치 ---
+                    자료형  결측치 결측 비율
+COMPANION_SEQ        int64       0      0.0%
+TRAVEL_ID              str       0      0.0%
+REL_CD               int64       0      0.0%
+COMPANION_GENDER     int64       0      0.0%
+COMPANION_AGE_GRP    int64       0      0.0%
+COMPANION_SITUATION  int64       0      0.0%
+
+--- 숫자 열 통계 ---
+통계를 낼 숫자 열 없음 (문자열이거나 ID·코드)
+
+===== 원본 동반자정보 중 추천에 쓰는 열 =====
+전체 6개 열 중 2개, 3,977행
+
+--- 열별 자료형과 결측치 ---
+          자료형  결측치 결측 비율
+TRAVEL_ID    str       0      0.0%
+REL_CD     int64       0      0.0%
+
+--- 숫자 열 통계 ---
+통계를 낼 숫자 열 없음 (문자열이거나 ID·코드)
+
+===== TourAPI 관광지 목록 (area_list.csv) =====
+크기 (행, 열): (5389, 22)
+
+--- 열별 자료형과 결측치 ---
+                자료형  결측치 결측 비율
+addr1              str       1      0.0%
+addr2              str    4329     80.3%
+areacode       float64    3941     73.1%
+cat1               str    3941     73.1%
+cat2               str    3941     73.1%
+cat3               str    3941     73.1%
+contentid          str       0      0.0%
+contenttypeid      str       0      0.0%
+createdtime      int64       0      0.0%
+mapx           float64       0      0.0%
+mapy           float64       0      0.0%
+mlevel         float64     186      3.5%
+modifiedtime     int64       0      0.0%
+sigungucode    float64    3941     73.1%
+tel                str    5048     93.7%
+title              str       0      0.0%
+zipcode            str      34      0.6%
+lDongRegnCd      int64       0      0.0%
+lDongSignguCd    int64       0      0.0%
+lclsSystm1         str       0      0.0%
+lclsSystm2         str       0      0.0%
+lclsSystm3         str       0      0.0%
+
+--- 숫자 열 통계 ---
+통계를 낼 숫자 열 없음 (문자열이거나 ID·코드)
+
+===== TourAPI 관광지 목록 중 추천에 쓰는 열 =====
+전체 22개 열 중 7개, 5,389행
+
+--- 열별 자료형과 결측치 ---
+                자료형  결측치 결측 비율
+contentid          str       0      0.0%
+contenttypeid      str       0      0.0%
+title              str       0      0.0%
+addr1              str       1      0.0%
+mapx           float64       0      0.0%
+mapy           float64       0      0.0%
+lclsSystm1         str       0      0.0%
+
+--- 숫자 열 통계 ---
+통계를 낼 숫자 열 없음 (문자열이거나 ID·코드)
+
+===== TourAPI 관광지 목록의 값 분포 =====
+
+--- 관광 타입 (contenttypeid) ---
+                  개수   비율
+12 관광지        2,768  51.4%
+28 레포츠        1,174  21.8%
+14 문화시설      1,106  20.5%
+15 축제공연행사    341   6.3%
+
+--- 시·도 (lDongRegnCd) ---
+          개수   비율
+41 경기  2,996  55.6%
+11 서울  1,660  30.8%
+28 인천    733  13.6%
+
+--- 공식 대분류 (lclsSystm1) ---
+     개수   비율
+VE  2,207  41.0%
+HS    689  12.8%
+NA    628  11.7%
+LS    568  10.5%
+AC    533   9.9%
+EX    423   7.8%
+EV    341   6.3%
+
+여행 로그 장소와 매칭된 관광지: 834 / 5,389곳 (15.5%)
+
+===== TourAPI 장소 설명 (overview.csv) =====
+크기 (행, 열): (834, 2)
+
+--- 열별 자료형과 결측치 ---
+          자료형  결측치 결측 비율
+contentid    str       0      0.0%
+overview     str       4      0.5%
+
+--- 숫자 열 통계 ---
+통계를 낼 숫자 열 없음 (문자열이거나 ID·코드)
+
+--- 설명 길이 통계 (설명이 있는 곳) ---
+             count   mean    std   min    25%    50%    75%     max
+설명 길이(글자 수)  830.0  390.7  172.8  96.0  273.0  353.0  467.8  1333.0
+
+===== 전처리 후 여행지 방문 (visits.csv) =====
+크기 (행, 열): (5338, 23)
+
+--- 열별 자료형과 결측치 ---
+                     자료형  결측치 결측 비율
+TRAVELER_ID             str       0      0.0%
+TRAVEL_ID               str       0      0.0%
+SPLIT                   str       0      0.0%
+SOURCE                  str       0      0.0%
+VISIT_AREA_ID         int64       0      0.0%
+VISIT_ORDER           int64       0      0.0%
+ITEM_ID                 str       0      0.0%
+ITEM_NM                 str       0      0.0%
+VISIT_AREA_NM           str       0      0.0%
+POI_ID                  str     425      8.0%
+REP_POI_ID              str     244      4.6%
+VISIT_AREA_TYPE_CD    int64       0      0.0%
+VISIT_START_YMD         str       0      0.0%
+SIDO                    str     281      5.3%
+SIGUNGU                 str     281      5.3%
+X_COORD             float64     270      5.1%
+Y_COORD             float64     270      5.1%
+XY_SOURCE               str       0      0.0%
+RESIDENCE_TIME_MIN  float64       0      0.0%
+DGSTFN              float64       0      0.0%
+REVISIT_INTENTION   float64       0      0.0%
+RCMDTN_INTENTION    float64       0      0.0%
+REVISIT_YN              str       0      0.0%
+
+--- 숫자 열 통계 ---
+       RESIDENCE_TIME_MIN   DGSTFN  REVISIT_INTENTION  RCMDTN_INTENTION
+count             5338.00  5338.00            5338.00           5338.00
+mean                95.61     4.38               4.18              4.32
+std                110.48     0.79               0.95              0.84
+min                  0.00     1.00               1.00              1.00
+25%                 30.00     4.00               4.00              4.00
+50%                 60.00     5.00               4.00              5.00
+75%                120.00     5.00               5.00              5.00
+max               2280.00     5.00               5.00              5.00
+
