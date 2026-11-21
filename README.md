@@ -2,7 +2,7 @@
 
 Machine Learning Term Project — Team 8
 
-여행 로그 데이터를 학습해 사용자의 여행 스타일, 동반자, 여행 미션·동기, 유명 관광지 선호도, 이번 여행에서 다녀온 곳을 반영해 개인 맞춤형 수도권(서울·경기·인천) 여행지를 추천하는 시스템
+여행 로그 데이터를 학습해 사용자의 여행 스타일, 동반자, 여행 미션·동기, 유명 관광지 선호도, 이번 여행에서 다녀온 곳을 반영해 개인 맞춤형 수도권(서울·경기·인천) 여행지를 추천하는 시스템이다.
 
 <br>
 
@@ -15,24 +15,23 @@ Machine Learning Term Project — Team 8
 | 대상 사용자 | 수도권으로 당일 또는 단기 여행을 계획하는 사용자 |
 | 필터링 기법 | 콘텐츠 기반 필터링 (CBF) + 모델 기반 협업 필터링 (방문 MF, 직접 구현) |
 | 추천 방식 | 전환형 하이브리드: 설문만 입력하면 CBF, 이번 여행에서 다녀온 곳까지 입력하면 방문 MF |
-| 확장 기능 (예정) | 다음 장소·코스 추천 (마르코프 체인, 연관 규칙, DBSCAN) |
+| 확장 기능 (예정) | 다음 장소·코스 추천 |
 
 <br>
 
 ## 2. 데이터셋
 
-AI Hub 데이터는 이용 조건상 승인받지 않은 사람에게 제공할 수 없고, 국외 반출도 별도 합의가 필요해서 레포에 **올리지 않아요.** 각자 AI Hub에서 직접 내려받아야 해요.
-TourAPI 장소 목록·장소 설명(이용허락범위 제한 없음)과 ASOS 날씨 자료(공공누리 제1유형)는 재배포할 수 있어서 **레포에 포함해 뒀어요.**
+AI Hub 데이터는 이용 조건상 승인받지 않은 사람에게 제공할 수 없고, 국외 반출도 별도 합의가 필요해서 레포에 올리지 않는다. 각자 AI Hub에서 직접 내려받아야 한다.
 
 | 데이터 | 출처 | 받는 방식 | 위치 |
 |---|---|---|---|
 | 국내 여행로그 데이터(수도권) (2023) | [AI Hub](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71776) | 각자 파일 다운로드 (zip) | `data/raw/TL/`, `data/raw/VL/` |
-| 관광정보 서비스 (TourAPI) | [공공데이터포털](https://www.data.go.kr/data/15101578/openapi.do) | **레포에 포함** | `data/raw/tourapi/area_list.csv`, `overview.csv` |
-| 종관기상관측(ASOS) 일자료 | [기상자료개방포털](https://data.kma.go.kr/data/grnd/selectAsosRltmList.do?pgmNo=36) | **레포에 포함** | `data/raw/asos/asos_daily.csv` |
+| 관광정보 서비스 (TourAPI) | [공공데이터포털](https://www.data.go.kr/data/15101578/openapi.do) | 레포에 포함 | `data/raw/tourapi/area_list.csv`, `overview.csv` |
+| 종관기상관측(ASOS) 일자료 | [기상자료개방포털](https://data.kma.go.kr/data/grnd/selectAsosRltmList.do?pgmNo=36) | 레포에 포함 | `data/raw/asos/asos_daily.csv` |
 
 ### 2-1. 여행 로그 데이터 받기
 
-위 AI Hub 페이지에서 `TL_csv.zip`과 `VL_csv.zip`을 내려받아서 압축을 푼 후, CSV 파일을 `data/raw/TL/`, `data/raw/VL/`에 넣어요.
+위 AI Hub 페이지에서 `TL_csv.zip`과 `VL_csv.zip`을 내려받아서 압축을 푼 후, CSV 파일을 `data/raw/TL/`, `data/raw/VL/`에 넣는다.
 
 | 항목 | Training (TL) | Validation (VL) | 합계 |
 |---|---|---|---|
@@ -40,44 +39,27 @@ TourAPI 장소 목록·장소 설명(이용허락범위 제한 없음)과 ASOS �
 | 방문 기록 | 21,384건 | 2,770건 | 24,154건 |
 | 방문 기간 | | | **2023-04-28 ~ 2023-09-18** |
 
-> 공식 Validation 320명만 테스트로 쓰면 평가할 정답이 너무 적어서, 두 폴더를 합쳐(여행객 2,880명) 우리가 직접 train / validation / test로 나눠요.
-
 ### 2-2. 관광정보(TourAPI) 데이터
-
-`data/raw/tourapi/area_list.csv`가 레포에 들어 있어서 따로 받지 않아도 돼요.
+`data/raw/tourapi/area_list.csv`에 들어 있어서 따로 받지 않아도 된다.
 
 **받은 조건**
 
 | 항목 | 값 |
 |---|---|
-| 수집일 | 2026-10-28 (TourAPI는 실시간으로 바뀌어서, 다시 받으면 내용이 조금 달라질 수 있어요) |
+| 수집일 | 2026-10-28 (TourAPI는 실시간으로 바뀌어서, 다시 받으면 내용이 조금 달라질 수 있다) |
 | 기능 | 지역기반 관광정보조회 (`areaBasedList2`, KorService2) |
 | 지역 (`lDongRegnCd`) | 11 서울, 28 인천, 41 경기 |
 | 관광 타입 (`contentTypeId`) | 12 관광지, 14 문화시설, 15 축제공연행사, 28 레포츠 |
 | 개수 | 5,389곳 (서울 1,660 · 인천 733 · 경기 2,996) |
 | 형식 | CSV (UTF-8) |
 
-**다시 수집하려면** (인증키가 필요한 경우는 이때뿐이에요)
-
-1. 공공데이터포털에 로그인하고 위 페이지에서 **활용신청**을 눌러 인증키를 받아요. 개발계정은 기능별로 하루 1,000회까지 호출할 수 있어요.
-2. `.env.example`을 복사해 이름을 `.env`로 바꾸고, 포털의 **일반 인증키**를 적어요. `.env`는 git에 올라가지 않아요.
-3. 프로젝트 최상위 폴더에서 수집 코드를 실행해요.
-
-   ```bash
-   python -m src.preprocessing.collect_tourapi
-   ```
-
 **장소 설명 (`overview.csv`)**
 
-CBF의 텍스트 점수(TF-IDF)에 쓰는 장소 설명이에요. 여행 로그 장소와 매칭된 TourAPI 관광지 834곳의 설명(`overview`)을 받아 뒀어요. 그중 4곳은 설명이 비어 있어요. 다시 받으려면 전처리를 먼저 돌린 뒤 실행해요. 이미 받은 장소는 건너뛰어요.
-
-```bash
-python -m src.preprocessing.collect_overview
-```
+CBF의 텍스트 점수(TF-IDF)에 쓰는 장소 설명이다. 여행 로그 장소와 매칭된 TourAPI 관광지 834곳의 설명(`overview`)을 받아 두었다.
 
 ### 2-3. 날씨(ASOS) 데이터
 
-`data/raw/asos/asos_daily.csv`가 레포에 들어 있어서 따로 받지 않아도 돼요.
+`data/raw/asos/asos_daily.csv`에 들어 있어서 따로 받지 않아도 된다.
 
 **받은 조건** (다시 받을 때 같은 조건으로)
 
@@ -93,7 +75,7 @@ python -m src.preprocessing.collect_overview
 
 ## 3. 실행하기
 
-모든 명령은 프로젝트 최상위 폴더에서 실행해요.
+모든 명령은 프로젝트 최상위 폴더에서 실행한다.
 
 ```bash
 pip install -r requirements.txt
@@ -101,7 +83,7 @@ pip install -r requirements.txt
 
 ### 3-1. 전처리
 
-`data/raw/TL/`, `data/raw/VL/`에 여행 로그 CSV를 넣은 뒤 실행해요. 결과는 `data/processed/`에 생기고 (git에 안 올라가요), 요약 숫자는 `results/metrics/preprocess_summary.txt`에 남아요. 시드가 고정돼 있어서 누가 돌려도 결과가 같아요.
+`data/raw/TL/`, `data/raw/VL/`에 여행 로그 CSV를 넣은 뒤 실행한다. 결과는 `data/processed/`에 생기고, 요약 숫자는 `results/metrics/preprocess_summary.txt`에 남는다. 시드가 고정돼 있어서 누가 돌려도 결과가 같다.
 
 ```bash
 python -m src.preprocessing.preprocess
@@ -127,15 +109,14 @@ python -m src.preprocessing.preprocess
 
 ### 3-2. 모델 학습과 평가
 
-전처리를 먼저 돌린 뒤 실행해요. 각 모델이 val로 설정을 비교하고, 결과 표를 `results/metrics/`에 저장해요. 학습된 모델은 따로 저장하지 않아요.
+전처리를 먼저 돌린 뒤 실행한다. 각 모델이 val로 설정을 비교하고, 결과 표를 `results/metrics/`에 저장한다. 학습된 모델은 따로 저장하지 않는다.
 
 ```bash
 python -m src.modeling.cbf     # 콘텐츠 기반 필터링 -> cbf_val_*.csv
 python -m src.modeling.mf      # 평점 MF, 방문 MF -> mf_val_*.csv
 ```
 
-- `--check`: 여러 사람을 한 번에 채점하는 빠른 평가가 한 사람씩 채점한 결과와 같은지 확인해요. 점수 계산을 고친 뒤 실행해요.
-- `--test`: 고른 설정을 test로 채점해요. **모든 모델이 끝난 뒤 마지막에 한 번만** 써요.
+- `--test`: 터미널 추천과 같은 기본 설정(`DEFAULT_*`)을 test로 채점한다. **모든 모델이 끝난 뒤 마지막에 한 번만** 쓴다.
 
 **평가 방법** (`src/modeling/evaluate.py`, 모든 모델이 같은 코드로 채점)
 
@@ -146,7 +127,7 @@ python -m src.modeling.mf      # 평점 MF, 방문 MF -> mf_val_*.csv
 | 정답 | 그 사람이 간 장소 전부 | 여행 뒤쪽 30% 장소 |
 
 - 후보: train 여행객이 한 번이라도 간 수도권 장소 중 지역 축제를 뺀 1,516곳
-- 지표: Recall@K, NDCG@K, Hit@K (K = 5, 10, 20). 설정을 고르는 기준은 cold·warm NDCG@10 평균이에요.
+- 지표: Recall@K, NDCG@K, Hit@K (K = 5, 10, 20). 설정을 고르는 기준은 cold·warm NDCG@10 평균이다.
 
 **모델 요약**
 
@@ -165,32 +146,17 @@ python -m src.modeling.mf      # 평점 MF, 방문 MF -> mf_val_*.csv
 | CBF | **0.155** | 0.177 |
 | 방문 MF | 0.130 | **0.296** |
 
-cold는 CBF, warm은 방문 MF가 좋아서 터미널 추천은 두 모델을 상황에 따라 골라 써요. warm에서 방문 MF가 강한 이유는 같은 여행에서 함께 가는 근처 장소를 잘 맞히기 때문이에요.
-
-**그래프** (cbf.py, mf.py를 먼저 실행한 뒤)
-
-```bash
-python -m src.plots      # results/figures/val_*.png, 그래프 숫자는 results/metrics/plots_val_summary.csv
-```
-
-| 파일 | 내용 |
-|---|---|
-| `val_1_models.png` | 모델 비교 (무작위, 인기순, 평점 MF, CBF, 방문 MF), 95% 신뢰구간 |
-| `val_2_cbf_steps.png` | CBF 단계별 성능과 직전 단계 대비 p값 |
-| `val_3_warm_region.png` | warm을 같은 시·군·구 정답 유무로 나눈 비교 |
-| `val_4_tuning.png` | CBF 텍스트 세기, 방문 MF의 k·alpha 설정 곡선 |
-
 ### 3-3. 터미널 추천
 
 ```bash
 python -m src.recommend            # 추천 10곳
 ```
 
-설문 8문항(성별, 연령대, 동반자, 여행 스타일 3문항, 여행 미션·동기, 원하는 지역)에 답하고, 마지막에 이번 여행에서 이미 다녀온 곳을 선택해서 입력해요.
+설문 8문항(성별, 연령대, 동반자, 여행 스타일 3문항, 여행 미션·동기, 원하는 지역)에 답하고, 마지막에 이번 여행에서 이미 다녀온 곳을 선택해서 입력한다.
 
-- 다녀온 곳을 입력하지 않으면 **CBF**로 추천해요. 학습과 형태소 분석기 로딩으로 30초 정도 걸려요.
-- 다녀온 곳을 입력하면 **방문 MF**로 추천해요. 2초 안팎이에요.
-- 수도권 장소만 추천하고, 다녀온 곳은 다시 추천하지 않아요.
+- 다녀온 곳을 입력하지 않으면 **CBF**로 추천한다.
+- 다녀온 곳을 입력하면 **방문 MF**로 추천한다.
+- 수도권 장소만 추천하고, 다녀온 곳은 다시 추천하지 않는다.
 
 <br>
 
@@ -205,14 +171,14 @@ travel-destination-recsys/
 ├── data/                  # !! tourapi/, asos/ 말고는 커밋 금지
 │   ├── raw/               #   원본, 수정 금지
 │   │   ├── TL/, VL/       #     AI Hub 여행 로그 (각자 다운로드)
-│   │   ├── tourapi/       #     TourAPI 장소 목록, 장소 설명 (레포에 포함)
-│   │   └── asos/          #     ASOS 날씨 일자료 (레포에 포함)
-│   └── processed/         #   train / val / test, items, users, visits
+│   │   ├── tourapi/       #     TourAPI 장소 목록, 장소 설명
+│   │   └── asos/          #     ASOS 날씨 일자료
+│   └── processed/         #   전처리 후 데이터
 ├── src/
 │   ├── __init__.py
 │   ├── config.py          # 공통 경로·시드·상수
 │   ├── recommend.py       # 터미널 추천 (설문 -> CBF 또는 방문 MF)
-│   ├── plots.py           # 발표용 성능 그래프
+│   ├── plots.py           # 시각화 그래프
 │   ├── preprocessing/     # 전처리 파트
 │   │   ├── __init__.py
 │   │   ├── collect_tourapi.py   # TourAPI 장소 목록 수집
@@ -228,8 +194,8 @@ travel-destination-recsys/
 │       ├── cbf.py         # 콘텐츠 기반 필터링 (사용자 프로필, 유사도, 점수 보정)
 │       ├── text.py        # 장소 설명 TF-IDF (Kiwi 명사 추출)
 │       └── mf.py          # 평점 MF, 방문 MF (직접 구현)
-└── results/               # 실행 결과 (커밋 O)
-    ├── figures/           # 발표용 그래프: val_1_models.png … val_4_tuning.png (plots.py)
+└── results/               # 실행 결과
+    ├── figures/           # 시각화 그래프
     └── metrics/           # 실행 결과 표·로그
         ├── preprocess_summary.txt  # 전처리 요약 숫자 (preprocess.py)
         ├── cbf_val_*.csv          # CBF 설정·보정·텍스트 세기 비교 (cbf.py)
@@ -241,10 +207,10 @@ travel-destination-recsys/
 
 ## 5. 브랜치 관리 규칙
 
-- `main` 하나와 작업 브랜치로 관리해요. **`main`에 직접 커밋하지 않고**, 작업 브랜치에서 Pull Request로 합쳐요.
-- 작업 기간이 짧아서 Merge는 기본적으로 작성자가 바로 하고, 대신 PR 내용은 꼭 적어요. 다 쓴 브랜치는 삭제해요.
-- 단, `src/config.py`를 바꾸는 경우 팀원 1명 이상 확인받은 후 Merge해요.
-- Merge한 뒤에 문제를 발견하면 PR에 댓글을 남기고, 필요하면 GitHub의 **Revert** 버튼으로 PR 단위로 되돌려요.
+- `main` 하나와 작업 브랜치로 관리한다. **`main`에 직접 커밋하지 않고**, 작업 브랜치에서 Pull Request로 합친다.
+- 작업 기간이 짧아서 Merge는 기본적으로 작성자가 바로 하고, 대신 PR 내용은 꼭 적는다. 다 쓴 브랜치는 삭제한다.
+- 단, `src/config.py`를 바꾸는 경우 팀원 1명 이상 확인받은 후 Merge한다.
+- Merge한 뒤에 문제를 발견하면 PR에 댓글을 남기고, 필요하면 GitHub의 **Revert** 버튼으로 PR 단위로 되돌린다.
 
 | 브랜치 | 용도 |
 |---|---|
@@ -253,7 +219,7 @@ travel-destination-recsys/
 
 ### 브랜치 이름
 
-`파트/작업내용` 형식으로 만들어요. 모두 소문자로 쓰고, 띄어쓰기 대신 하이픈(`-`)을 써요.
+형식: `파트/작업내용`
 
 | 파트 | 언제 | 주로 고치는 폴더 | 예시 |
 |---|---|---|---|
@@ -263,7 +229,7 @@ travel-destination-recsys/
 
 ### 커밋 메시지
 
-`타입: 짧은 설명` 형식으로 써요.
+형식: `타입: 짧은 설명`
 
 | 타입 | 언제 | 예시 |
 |---|---|---|
@@ -276,18 +242,18 @@ travel-destination-recsys/
 
 ### Pull Request 작성
 
-- **제목**: 커밋 메시지와 같은 형식으로 써요. 예: `feat: MF 학습 및 검증 RMSE 계산`
-- **내용**: 무엇을 수정했는지 간단히 요약해요.
+- **제목**: 커밋 메시지와 같은 형식으로 쓴다. 예: `feat: MF 학습 및 검증 RMSE 계산`
+- **내용**: 무엇을 수정했는지 간단히 요약한다.
 
 <br>
 
 ## 6. 협업 규칙
 
-- 경로와 공통 상수(시드, 관광 유형 코드 등)는 코드에 직접 쓰지 말고 `src/config.py`에서 가져와요.
-- `data/raw/`의 원본은 수정하지 않아요. 가공한 결과는 `data/processed/`에 저장해요.
-- 발표에 쓸 그래프는 `results/figures/`, 실행 결과 표·로그는 `results/metrics/`에 저장해요.
-- 인터넷(블로그, Kaggle, GitHub 등)의 코드를 참고했으면 코드 옆 주석과 [references.md](references.md)에 **출처를 남겨요.**
-- 수업에서 다루지 않은 모듈·클래스·라이브러리·함수는 [references.md](references.md)에 파라미터까지 설명해요.
+- 경로와 공통 상수(시드, 관광 유형 코드 등)는 코드에 직접 쓰지 말고 `src/config.py`에서 가져온다.
+- `data/raw/`의 원본은 수정하지 않고, 가공한 결과는 `data/processed/`에 저장한다.
+- 발표에 쓸 그래프는 `results/figures/`, 실행 결과 표·로그는 `results/metrics/`에 저장한다.
+- 인터넷(블로그, Kaggle, GitHub 등)의 코드를 참고했으면 코드 옆 주석과 [references.md](references.md)에 **출처를 남긴다.**
+- 수업에서 다루지 않은 모듈·클래스·라이브러리·함수는 [references.md](references.md)에 파라미터까지 설명한다.
 
 <br>
 

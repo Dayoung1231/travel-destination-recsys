@@ -28,7 +28,7 @@
 
 실행 (프로젝트 최상위 폴더에서):
     python -m src.modeling.mf            # val로 평점 MF·방문 MF 설정 비교
-    python -m src.modeling.mf --test     # 위에 더해 고른 설정을 test로 채점 (마지막에 한 번만)
+    python -m src.modeling.mf --test     # 위에 더해 DEFAULT_IMPLICIT를 test로 채점 (마지막에 한 번만)
     python -m src.modeling.mf --check    # 빠른 평가가 evaluate와 같은 결과인지 확인
 """
 import argparse
@@ -277,7 +277,7 @@ def check_fast_path():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--test", action="store_true", help="고른 설정을 test로 채점")
+    ap.add_argument("--test", action="store_true", help="DEFAULT_IMPLICIT를 test로 채점")
     ap.add_argument("--check", action="store_true", help="빠른 평가(evaluate_matrix)가 evaluate와 같은 결과인지만 확인")
     args = ap.parse_args()
     if args.check:
@@ -329,6 +329,10 @@ def main():
     print(model.recommend(tid, known[tid]).to_string())
 
     if args.test:
+        # 방문 MF는 최종 시스템(터미널 추천과 발표 그래프)과 같은 DEFAULT_IMPLICIT로 채점한다.
+        # 위에서 고른 그리드 1등은 val 차이가 거의 없어서(reg 0.1과 1.0), test를 본 뒤 바꾸지 않도록 DEFAULT로 고정한다
+        cfg = DEFAULT_IMPLICIT
+        model = ImplicitMF(**cfg).fit()
         test_ex = ex_model.predict(load_table("ratings_test_hidden")["TRAVELER_ID"],
                                    load_table("ratings_test_hidden")["ITEM_ID"])
         print(f"\n[test / 평점 예측] {best_ex}: {rating_errors(test_ex, load_table('ratings_test_hidden')['RATING'])}")
