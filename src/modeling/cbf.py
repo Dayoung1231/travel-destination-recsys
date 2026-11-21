@@ -33,7 +33,7 @@
     python -m src.modeling.cbf            # val로 설정 비교 + 점수 보정 세기 + 텍스트 점수 세기 고르기
 
     (x)
-    python -m src.modeling.cbf --test     # 위에 더해 DEFAULT_MODEL의 보정 전·후를 test로 채점 (마지막에 한 번만)
+    python -m src.modeling.cbf --test     # 위에 더해 DEFAULT_MODEL의 보정·텍스트 전·후를 DEFAULT 설정으로 test 채점 (마지막에 한 번만)
     python -m src.modeling.cbf --check    # 빠른 평가가 evaluate와 같은 결과인지 확인
 """
 import argparse
@@ -325,7 +325,7 @@ def check_fast_path():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--test", action="store_true", help="DEFAULT_MODEL의 보정·텍스트 전후와 인기도를 test로 채점")
+    ap.add_argument("--test", action="store_true", help="DEFAULT_MODEL의 보정·텍스트 전후(DEFAULT_ADJUST, DEFAULT_TEXT)와 인기도를 test로 채점")
     ap.add_argument("--check", action="store_true", help="빠른 평가(evaluate_matrix)가 evaluate와 같은 결과인지만 확인")
     args = ap.parse_args()
     if args.check:
@@ -384,7 +384,11 @@ def main():
         print(model.recommend(tid, given).to_string())
 
     if args.test:
-        base, adjusted = build_model(DEFAULT_MODEL), build_model(DEFAULT_MODEL, **adjust)
+        # test는 최종 시스템(터미널 추천과 발표 그래프)과 같은 DEFAULT_ADJUST·DEFAULT_TEXT로 채점한다.
+        # 위에서 고른 그리드 1등은 val 차이가 0.001 안팎이라, test를 본 뒤 설정을 바꾸지 않도록 DEFAULT로 고정한다
+        base = build_model(DEFAULT_MODEL)
+        adjusted = build_model(DEFAULT_MODEL, **DEFAULT_ADJUST)
+        model = build_model(DEFAULT_MODEL, **DEFAULT_ADJUST, text=DEFAULT_TEXT)
         for mode in ("cold", "warm"):
             test = pd.DataFrame({
                 "popularity": evaluate(popularity_scorer(), "test", mode)[0],
